@@ -1,12 +1,15 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, DimensionValue } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useApp } from '../context/AppContext';
 import { Mode } from '../types';
 import { colors } from '../theme';
+import { connectStream } from '../services/stream';
+import { hasApi } from '../services/api';
 import ModeToggle from '../components/ModeToggle';
 import NarrationCard from '../components/NarrationCard';
 import DescribeButton from '../components/DescribeButton';
+import StreamToggle from '../components/StreamToggle';
 import DetailSegmented from '../components/DetailSegmented';
 import QuickActions from '../components/QuickActions';
 
@@ -24,11 +27,24 @@ const DETECTIONS: Record<Mode, { left: DimensionValue; top: DimensionValue; widt
   ],
 };
 
+const STREAM_INTERVAL_MS = 1600;
+const SPEAK_MIN_GAP_MS = 3500;
+
 export default function LiveViewScreen() {
-  const { theme, mode, describe } = useApp();
+  const { theme, mode, detail, describe, announce, streaming } = useApp();
   const c = colors[theme];
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
+
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
+  const detailRef = useRef(detail);
+  detailRef.current = detail;
+  const announceRef = useRef(announce);
+  announceRef.current = announce;
+
+  const lastTextRef = useRef('');
+  const lastAtRef = useRef(0);
 
   const handleDescribe = async () => {
     let image: string | undefined;
@@ -40,6 +56,44 @@ export default function LiveViewScreen() {
     }
     await describe(image);
   };
+
+  useEffect(() => {
+    if (!streaming) return;
+
+    if (!hasApi()) {
+      announceRef.current('To use live narration, run the backend and set API.baseUrl in src/config.ts.');
+      return;
+    }
+
+    const client = connectStream(
+      (text) => {
+        const now = Date.now();
+        if (text === lastTextRef.current) return;
+        if (now - lastAtRef.current < SPEAK_MIN_GAP_MS) return;
+        lastTextRef.current = text;
+        lastAtRef.current = now;
+        announceRef.current(text);
+      },
+      () => {
+        // connection errors are non-fatal in live mode; keep listening
+      },
+    );
+
+    const timer = setInterval(async () => {
+      try {
+        const shot = await cameraRef.current?.takePictureAsync({ base64: true, quality: 0.35 });
+        const frame = shot?.base64;
+        if (frame) client.sendFrame(frame, modeRef.current, detailRef.current);
+      } catch {
+        // capture can fail mid-stream; skip this tick
+      }
+    }, STREAM_INTERVAL_MS);
+
+    return () => {
+      clearInterval(timer);
+      client.close();
+    };
+  }, [streaming]);
 
   return (
     <View style={styles.root}>
@@ -73,7 +127,8 @@ export default function LiveViewScreen() {
       </View>
 
       <DetailSegmented />
-      <DescribeButton onPress={handleDescribe} />
+      {streaming ? null : <DescribeButton onPress={handleDescribe} />}
+      <StreamToggle />
       <QuickActions />
     </View>
   );

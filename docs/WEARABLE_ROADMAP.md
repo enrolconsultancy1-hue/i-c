@@ -30,9 +30,11 @@ sign reads EXIT" — with a single touch or voice command to change detail level
 
 ## Phases
 
-### Phase 0 — Phone MVP (current repo) ✅
-- Camera + Gemini narration, OCR, obstacle radar, GPS nav, TTS.
-- Validate the perception prompts and the "safety-first" narration style with real users.
+### Phase 0 — Phone MVP (current repo)
+- ✅ Camera + Gemini narration, OCR, obstacle radar, GPS nav, TTS.
+- ✅ **Continuous streaming bridge** — WebSocket `/api/v1/vision/stream` with latest-frame-wins
+  coalescing + duplicate suppression; the app streams frames live ("Continuous narration").
+- Next: validate the perception prompts and the "safety-first" narration style with real users.
 
 ### Phase 1 — Tethered glasses (prototype)
 - Off-the-shelf smart-glasses dev kit (or a custom 3D-printed frame with a small camera module +
@@ -40,6 +42,7 @@ sign reads EXIT" — with a single touch or voice command to change detail level
 - Glasses stream frames + IMU data over **BLE/WiFi** to the phone (or a pocket edge unit); the
   phone/unit runs perception and streams audio back. Budget ~150–300 ms round-trip.
 - Reuse the existing `app/` as the companion: configuration, navigation, model updates, battery.
+- The WebSocket streaming channel built in Phase 0 is the transport the glasses will use.
 
 ### Phase 2 — Self-contained edge device
 - Move perception on-device: **YOLO** object/obstacle detection, monocular **depth estimation**,
@@ -77,7 +80,7 @@ sign reads EXIT" — with a single touch or voice command to change detail level
 
 ## Recommended next concrete steps
 
-1. User-test the phone MVP to lock the narration vocabulary.
+1. User-test the phone MVP (including continuous narration) to lock the narration vocabulary.
 2. Pick a glasses dev kit and build the Phase 1 BLE/WiFi streaming bridge.
 3. Port radar to on-device YOLO + depth; benchmark latency on a dev-kit NPU.
 4. Prototype head-tracked spatial audio.

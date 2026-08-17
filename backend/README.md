@@ -13,6 +13,7 @@ can be distributed without exposing credentials.
 | POST | `/api/v1/vision/describe` | scene narration |
 | POST | `/api/v1/vision/ocr` | read text in a frame |
 | POST | `/api/v1/vision/radar` | obstacle / object detection |
+| WS | `/api/v1/vision/stream` | continuous scene narration (WebSocket) |
 | GET | `/api/v1/navigation/directions` | walking routes (Directions proxy) |
 | GET | `/docs` | interactive OpenAPI UI |
 
@@ -45,6 +46,10 @@ Open http://localhost:8000/docs to try the API.
 In [`app/src/config.ts`](../app/src/config.ts) set `API.baseUrl` to this server
 (e.g. `http://192.168.1.20:8000` on your LAN for Expo Go). The app then routes all
 vision + navigation calls through the backend.
+
+The **continuous narration** mode streams camera frames to `/api/v1/vision/stream` over a
+WebSocket; the client sends frames and the server replies with narration (latest-frame-wins,
+duplicate-suppressed).
 
 ## Why Python?
 

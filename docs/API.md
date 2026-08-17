@@ -60,6 +60,29 @@ Response:
 
 `direction` ∈ `left | right | ahead | behind`. Up to 6 objects, most important first.
 
+## WS /api/v1/vision/stream
+
+Continuous scene narration over a WebSocket (`ws://<host>:8000/api/v1/vision/stream`).
+
+Client → server (one JSON message per captured frame):
+
+```json
+{ "image_base64": "...", "mode": "outdoor", "detail": "standard" }
+```
+
+Server → client:
+
+```json
+{ "type": "narration", "text": "You're on a sidewalk..." }
+```
+
+```json
+{ "type": "error", "message": "GEMINI_API_KEY is not configured on the server" }
+```
+
+Behavior: **latest-frame-wins** — if frames arrive faster than the model can answer, stale
+frames are skipped. Identical consecutive narration is suppressed so clients don't spam TTS.
+
 ## GET /api/v1/navigation/directions
 
 Query params: `origin` (`"lat,lng"` or address), `destination`, `mode` (default `walking`).
@@ -89,4 +112,5 @@ Response:
 ## Errors
 
 Business errors (missing keys, upstream failures) surface as HTTP 4xx/5xx with a `detail` string.
-Standard FastAPI validation errors return 422 with the invalid field.
+Standard FastAPI validation errors return 422 with the invalid field. On the WebSocket, errors
+are delivered as `{"type":"error","message":"..."}` frames.

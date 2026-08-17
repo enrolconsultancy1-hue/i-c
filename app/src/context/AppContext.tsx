@@ -20,6 +20,9 @@ interface AppState {
   narration: string;
   describing: boolean;
   describe: (imageBase64?: string) => Promise<void>;
+  streaming: boolean;
+  toggleStreaming: () => void;
+  announce: (text: string) => void;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -33,6 +36,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [route, setRoute] = useState<RouteOption | null>(null);
   const [narration, setNarration] = useState("Tap \u201CDescribe\u201D to hear what's around you.");
   const [describing, setDescribing] = useState(false);
+  const [streaming, setStreaming] = useState(false);
 
   const describe = useCallback(
     async (imageBase64?: string) => {
@@ -45,6 +49,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     },
     [describing, detail, offline, mode],
   );
+
+  const announce = useCallback(
+    (text: string) => {
+      setNarration(text);
+      speak(text, detail);
+    },
+    [detail],
+  );
+
+  const toggleStreaming = useCallback(() => {
+    setStreaming((s) => !s);
+  }, []);
 
   const value = useMemo<AppState>(
     () => ({
@@ -63,8 +79,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       narration,
       describing,
       describe,
+      streaming,
+      toggleStreaming,
+      announce,
     }),
-    [theme, detail, offline, mode, screen, route, narration, describing, describe],
+    [theme, detail, offline, mode, screen, route, narration, describing, describe, streaming, toggleStreaming, announce],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
