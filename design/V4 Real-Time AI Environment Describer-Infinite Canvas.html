@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>eye see · Design Delivery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #111110;
+    --bg-subtle: #191918;
+    --surface: #1e1e1d;
+    --surface-raised: #252524;
+    --border: rgba(255,255,255,0.06);
+    --border-hover: rgba(255,255,255,0.12);
+    --accent: #FF4D00;
+    --accent-dim: rgba(255,77,0,0.16);
+    --text: #e8e6e3;
+    --text-secondary: rgba(232,230,227,0.6);
+    --text-tertiary: rgba(232,230,227,0.32);
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.25);
+    --shadow-lg: 0 12px 40px rgba(0,0,0,0.45), 0 4px 12px rgba(0,0,0,0.3);
+    --shadow-drag: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 1.5px var(--accent);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-xl: 20px;
+    --font-sans: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --font-mono: "SF Mono", "Fira Code", "JetBrains Mono", "Cascadia Code", monospace;
+    --note-bg: #2a2018;
+    --note-border: rgba(255,77,0,0.28);
+    --transition-fast: 120ms cubic-bezier(0.25, 0.1, 0.25, 1);
+    --transition-normal: 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    font-family: var(--font-sans);
+    color: var(--text);
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 512px 512px;
+    mix-blend-mode: overlay;
+  }
+
+  .canvas-viewport { position: fixed; inset: 0; overflow: hidden; cursor: grab; }
+  .canvas-viewport.panning { cursor: grabbing; }
+  .canvas-world { position: absolute; left: 0; top: 0; width: 20000px; height: 20000px; transform-origin: 0 0; will-change: transform; }
+  .canvas-viewport { --grid-color: rgba(255,255,255,0.04); }
+
+  .canvas-el { position: absolute; cursor: grab; transition: box-shadow var(--transition-normal), transform var(--transition-fast); }
+  .canvas-el:hover { z-index: 10; }
+  .canvas-el.dragging { cursor: grabbing; z-index: 999; box-shadow: var(--shadow-drag) !important; transform: scale(1.01); transition: none; }
+
+  .section-header { position: absolute; pointer-events: none; display: flex; align-items: center; gap: 16px; white-space: nowrap; }
+  .section-header .section-num { font-family: var(--font-mono); font-size: 11px; font-weight: 500; letter-spacing: 0.08em; color: var(--accent); opacity: 0.8; }
+  .section-header .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-tertiary); }
+  .section-header .section-line { flex: none; width: 48px; height: 1px; background: linear-gradient(90deg, var(--accent) 0%, transparent 100%); opacity: 0.3; }
+
+  .canvas-title { position: absolute; pointer-events: none; font-weight: 800; line-height: 1.05; letter-spacing: -0.03em; color: var(--text); font-family: 'Archivo', var(--font-sans); }
+  .canvas-text { position: absolute; line-height: 1.7; letter-spacing: 0.005em; color: var(--text-secondary); min-width: 200px; max-width: 560px; white-space: pre-wrap; word-break: break-word; }
+
+  .canvas-tag { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; border-radius: 100px; font-size: 12px; font-weight: 500; letter-spacing: 0.02em; color: var(--text-secondary); background: var(--surface); border: 1px solid var(--border); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: border-color var(--transition-fast), background var(--transition-fast); white-space: nowrap; }
+  .canvas-tag:hover { border-color: var(--border-hover); background: var(--surface-raised); }
+  .canvas-tag .tag-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+
+  .context-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden; min-width: 220px; transition: border-color var(--transition-normal), box-shadow var(--transition-normal); }
+  .context-card:hover { border-color: var(--border-hover); box-shadow: var(--shadow-md); }
+  .context-card .card-head { padding: 16px 20px 12px; display: flex; align-items: center; gap: 10px; }
+  .context-card .card-head .head-indicator { width: 3px; height: 16px; border-radius: 2px; background: var(--accent); flex-shrink: 0; }
+  .context-card .card-head h3 { font-size: 13px; font-weight: 600; letter-spacing: 0.01em; color: var(--text); }
+  .context-card .card-content { padding: 0 20px 20px; font-size: 13px; line-height: 1.7; color: var(--text-secondary); }
+  .context-card .card-content ul { list-style: none; padding: 0; }
+  .context-card .card-content li { padding: 4px 0; padding-left: 12px; position: relative; }
+  .context-card .card-content li::before { content: ''; position: absolute; left: 0; top: 11px; width: 4px; height: 4px; border-radius: 50%; background: var(--text-tertiary); }
+
+  .ds-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden; transition: border-color var(--transition-normal), box-shadow var(--transition-normal); }
+  .ds-card:hover { border-color: var(--border-hover); box-shadow: var(--shadow-md); }
+  .ds-card .ds-head { padding: 16px 20px 12px; font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); }
+  .ds-card .ds-body { padding: 0 20px 20px; }
+
+  .ds-card .color-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(48px, 1fr)); gap: 8px; }
+  .ds-card .color-chip { aspect-ratio: 1; border-radius: var(--radius-sm); position: relative; transition: transform var(--transition-fast); }
+  .ds-card .color-chip:hover { transform: scale(1.08); }
+  .ds-card .color-chip .chip-label { position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%); font-family: var(--font-mono); font-size: 9px; color: var(--text-tertiary); white-space: nowrap; }
+
+  .ds-card .type-stack { display: flex; flex-direction: column; gap: 12px; }
+  .ds-card .type-row { display: flex; align-items: baseline; gap: 16px; }
+  .ds-card .type-label { font-family: var(--font-mono); font-size: 9px; color: var(--text-tertiary); min-width: 36px; flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.06em; }
+  .ds-card .type-sample { color: var(--text); line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .color-swatch-group { display: flex; flex-direction: row; flex-wrap: nowrap; gap: 20px; }
+  .swatch-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .swatch-circle { width: 52px; height: 52px; border-radius: 50%; box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255,255,255,0.08); transition: transform var(--transition-fast), box-shadow var(--transition-fast); }
+  .swatch-circle:hover { transform: scale(1.1); box-shadow: var(--shadow-md); }
+  .swatch-name { font-size: 10px; font-weight: 500; color: var(--text-secondary); text-align: center; }
+  .swatch-hex { font-family: var(--font-mono); font-size: 9px; color: var(--text-tertiary); text-align: center; }
+
+  .type-sample-group { display: flex; flex-direction: column; gap: 20px; min-width: 400px; }
+  .type-sample-row { display: flex; align-items: baseline; gap: 20px; }
+  .type-sample-meta { font-family: var(--font-mono); font-size: 9px; color: var(--text-tertiary); min-width: 48px; flex-shrink: 0; letter-spacing: 0.04em; }
+  .type-sample-text { color: var(--text); line-height: 1.25; }
+
+  .canvas-note { background: var(--note-bg); border: 1px solid var(--note-border); border-radius: var(--radius-md); padding: 16px 18px; min-width: 200px; max-width: 300px; box-shadow: var(--shadow-sm); transition: box-shadow var(--transition-normal), transform var(--transition-fast); }
+  .canvas-note:hover { box-shadow: var(--shadow-md); }
+  .canvas-note .note-tag { font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); opacity: 0.8; margin-bottom: 8px; }
+  .canvas-note .note-body { font-size: 13px; line-height: 1.65; color: var(--text-secondary); }
+
+  .design-page { background: #fff; border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-lg); transition: box-shadow var(--transition-normal); }
+  .design-page:hover { box-shadow: 0 16px 56px rgba(0,0,0,0.5), 0 6px 16px rgba(0,0,0,0.35); }
+  .design-page .page-content { width: 100%; height: 100%; overflow: hidden; }
+  .page-label { position: absolute; bottom: -32px; left: 0; font-size: 11px; font-weight: 500; letter-spacing: 0.02em; color: var(--text-tertiary); white-space: nowrap; display: flex; align-items: center; gap: 8px; }
+  .page-label .label-num { font-family: var(--font-mono); font-size: 10px; color: var(--accent); opacity: 0.7; }
+
+  .canvas-diagram { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-sm); }
+  .canvas-diagram .diagram-content { width: 100%; height: 100%; padding: 20px; }
+
+  .zoom-controls { position: fixed; bottom: 24px; right: 24px; display: flex; align-items: center; gap: 1px; z-index: 100; background: var(--bg-subtle); border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-md); }
+  .zoom-btn { width: 36px; height: 36px; background: transparent; border: none; color: var(--text-secondary); font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background var(--transition-fast), color var(--transition-fast); }
+  .zoom-btn:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+  .zoom-btn:active { background: rgba(255,255,255,0.03); }
+  .zoom-label { min-width: 50px; height: 36px; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
+
+  .coord-indicator { position: fixed; bottom: 28px; left: 24px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.04em; color: var(--text-tertiary); z-index: 100; padding: 4px 10px; background: rgba(17,17,16,0.85); border: 1px solid var(--border); border-radius: var(--radius-sm); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+
+  .kbd-hint { position: fixed; top: 20px; right: 24px; z-index: 100; font-size: 10px; color: var(--text-tertiary); display: flex; gap: 12px; opacity: 0; transition: opacity 0.4s ease; pointer-events: none; }
+  .canvas-viewport:hover ~ .kbd-hint { opacity: 1; }
+  .kbd-hint kbd { font-family: var(--font-mono); padding: 2px 6px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; font-size: 10px; }
+
+  /* ===== app screen primitives (inside design pages) ===== */
+  .pg { position: relative; width: 100%; height: 100%; background: #FFFFFF; color: #111111; font-family: 'Archivo', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden; }
+  .pg.dark { background: #0F0F0F; color: #FFFFFF; }
+  .pg-bar { display: flex; align-items: center; justify-content: space-between; padding: 20px 18px 8px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; font-weight: 700; }
+  .pg-title { font-size: 26px; font-weight: 800; letter-spacing: -0.015em; line-height: 1.12; padding: 4px 18px 0; }
+  .pg-sub { font-size: 14px; color: #5E5B54; line-height: 1.5; padding: 8px 18px 0; font-weight: 500; }
+  .pg.dark .pg-sub { color: #A19E96; }
+  .pg-body { flex: 1; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+  .pg-card { background: #F4F1EB; border: 1px solid #D9D2C5; border-radius: 14px; padding: 14px 16px; }
+  .pg.dark .pg-card { background: #1A1917; border-color: #2E2C27; }
+  .pg-card .lbl { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8A857B; margin-bottom: 6px; }
+  .pg.dark .pg-card .lbl { color: #7A756C; }
+  .pg-btn { min-height: 52px; border: none; border-radius: 12px; background: #FF4D00; color: #111111; font-family: 'Archivo', system-ui, sans-serif; font-size: 16px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .pg-btn.ghost { background: #F4F1EB; border: 1.5px solid #B9B0A0; color: #111111; font-weight: 700; }
+  .pg.dark .pg-btn.ghost { background: #1A1917; border-color: #4A463E; color: #FFFFFF; }
+  .pg-chip { display: inline-flex; align-items: center; gap: 6px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 5px 10px; border-radius: 999px; border: 1.5px solid #B9B0A0; color: #5E5B54; }
+  .pg.dark .pg-chip { border-color: #4A463E; color: #A19E96; }
+  .pg-chip.on { background: #FFC400; color: #111111; border-color: #FFC400; }
+  .pg-seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; background: #ECE7DD; border-radius: 12px; padding: 5px; }
+  .pg.dark .pg-seg { background: #24221E; }
+  .pg-seg button { min-height: 40px; border: none; border-radius: 9px; background: transparent; color: #5E5B54; font-family: 'Archivo', system-ui, sans-serif; font-size: 12px; font-weight: 700; }
+  .pg.dark .pg-seg button { color: #A19E96; }
+  .pg-seg button.on { background: #FFFFFF; color: #111111; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
+  .pg.dark .pg-seg button.on { background: #0F0F0F; color: #FFFFFF; }
+  .pg-cam { position: relative; flex: 1; min-height: 0; border-radius: 14px; overflow: hidden; background: radial-gradient(120% 90% at 50% 20%, #CBBBA6, #8E806C 46%, #4C443A); }
+  .pg.dark .pg-cam { background: radial-gradient(120% 90% at 50% 20%, #3A352E, #241F1A 46%, #100E0C); }
+  .pg-row { display: flex; gap: 10px; align-items: center; }
+  .pg-li { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #E4DED2; }
+  .pg.dark .pg-li { border-bottom-color: #2E2C27; }
+  .pg-li:last-child { border-bottom: none; }
+  .pg-li .ic { width: 38px; height: 38px; border-radius: 10px; background: #F4F1EB; display: grid; place-items: center; flex-shrink: 0; }
+  .pg.dark .pg-li .ic { background: #1A1917; }
+  .pg-li .nm { font-size: 15px; font-weight: 700; }
+  .pg-li .mt { font-size: 12px; color: #5E5B54; margin-top: 1px; }
+  .pg.dark .pg-li .mt { color: #A19E96; }
+  .pg-ic { width: 18px; height: 18px; }
+  .pg-note { font-size: 12px; color: #5E5B54; line-height: 1.55; font-weight: 500; }
+  .pg.dark .pg-note { color: #A19E96; }
+  .det { position: absolute; border: 2px solid #FFC400; border-radius: 4px; }
+  .det .dt { position: absolute; top: -22px; left: -2px; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.03em; background: #FFC400; color: #111111; padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
+  .i-svg { stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+</style>
+</head>
+<body>
+
+<div class="canvas-viewport" id="viewport">
+  <div class="canvas-world" id="world"></div>
+</div>
+
+<div class="zoom-controls">
+  <button class="zoom-btn" id="zoomOut" aria-label="Zoom out">&#8722;</button>
+  <div class="zoom-label" id="zoomLabel">100%</div>
+  <button class="zoom-btn" id="zoomIn" aria-label="Zoom in">+</button>
+  <button class="zoom-btn" id="zoomReset" title="Reset view" aria-label="Reset view">&#8962;</button>
+</div>
+
+<div class="coord-indicator" id="coordIndicator">0, 0</div>
+<div class="kbd-hint" id="kbdHint"></div>
+
+<script>
+(() => {
+  const UI_STRINGS = {
+    docTitle: 'eye see · Design Delivery',
+    zoom: { zoomIn: 'Zoom in', zoomOut: 'Zoom out', reset: 'Reset view' },
+    kbdHints: [['Scroll', 'pan'], ['\u2318Scroll', 'zoom'], ['\u2318Z', 'undo']],
+    sections: { context: '01 PROJECT CONTEXT', designSystem: '02 DESIGN SYSTEM', deliverables: '03 DESIGN DELIVERABLES' }
+  };
+
+  document.title = UI_STRINGS.docTitle;
+  document.getElementById('zoomIn').setAttribute('aria-label', UI_STRINGS.zoom.zoomIn);
+  document.getElementById('zoomOut').setAttribute('aria-label', UI_STRINGS.zoom.zoomOut);
+  document.getElementById('zoomReset').setAttribute('aria-label', UI_STRINGS.zoom.reset);
+  document.getElementById('kbdHint').innerHTML = UI_STRINGS.kbdHints
+    .map(([keys, action]) => `<span><kbd>${keys}</kbd> ${action}</span>`)
+    .join('');
+
+  const viewport = document.getElementById('viewport');
+  const world = document.getElementById('world');
+  const zoomLabel = document.getElementById('zoomLabel');
+  const coordIndicator = document.getElementById('coordIndicator');
+
+  let panX = 0, panY = 0, zoom = 1;
+  const MIN_ZOOM = 0.05, MAX_ZOOM = 8;
+
+  function updateTransform() {
+    world.style.transform = `translate(${panX}px,${panY}px) scale(${zoom})`;
+    zoomLabel.textContent = Math.round(zoom * 100) + '%';
+    updateGrid();
+  }
+  function updateGrid() {
+    const g = 40 * zoom;
+    const ox = panX % g, oy = panY % g;
+    viewport.style.backgroundImage = `radial-gradient(circle, var(--grid-color) 0.8px, transparent 0.8px)`;
+    viewport.style.backgroundSize = `${g}px ${g}px`;
+    viewport.style.backgroundPosition = `${ox}px ${oy}px`;
+  }
+
+  let isPanning = false, panSX, panSY;
+  viewport.addEventListener('pointerdown', (e) => {
+    if (e.target === viewport || e.target === world) {
+      isPanning = true; panSX = e.clientX - panX; panSY = e.clientY - panY;
+      viewport.classList.add('panning'); viewport.setPointerCapture(e.pointerId); e.preventDefault();
+    }
+  });
+  viewport.addEventListener('pointermove', (e) => {
+    if (!isPanning) return;
+    panX = e.clientX - panSX; panY = e.clientY - panSY; updateTransform();
+  });
+  viewport.addEventListener('pointerup', () => { isPanning = false; viewport.classList.remove('panning'); });
+
+  viewport.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const rect = viewport.getBoundingClientRect();
+    if (e.ctrlKey || e.metaKey) {
+      const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+      const wx = (mx - panX) / zoom, wy = (my - panY) / zoom;
+      const factor = e.deltaY > 0 ? 0.95 : 1.05;
+      zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom * factor));
+      panX = mx - wx * zoom; panY = my - wy * zoom;
+    } else {
+      const hasX = Math.abs(e.deltaX) > 0.5;
+      if (hasX || Math.abs(e.deltaX) > Math.abs(e.deltaY) * 0.3) {
+        panX -= e.deltaX; panY -= e.deltaY;
+      } else {
+        const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+        const wx = (mx - panX) / zoom, wy = (my - panY) / zoom;
+        const factor = e.deltaY > 0 ? 0.95 : 1.05;
+        zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom * factor));
+        panX = mx - wx * zoom; panY = my - wy * zoom;
+      }
+    }
+    updateTransform();
+  }, { passive: false });
+
+  function zoomAt(factor) {
+    const r = viewport.getBoundingClientRect();
+    const cx = r.width / 2, cy = r.height / 2;
+    const wx = (cx - panX) / zoom, wy = (cy - panY) / zoom;
+    zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom * factor));
+    panX = cx - wx * zoom; panY = cy - wy * zoom; updateTransform();
+  }
+  document.getElementById('zoomIn').onclick = () => zoomAt(1.25);
+  document.getElementById('zoomOut').onclick = () => zoomAt(0.8);
+  document.getElementById('zoomReset').onclick = () => { zoom = 1; panX = 0; panY = 0; updateTransform(); };
+
+  viewport.addEventListener('pointermove', (e) => {
+    if (isPanning) return;
+    const r = viewport.getBoundingClientRect();
+    coordIndicator.textContent = `${Math.round((e.clientX - r.left - panX) / zoom)}, ${Math.round((e.clientY - r.top - panY) / zoom)}`;
+  });
+
+  let lastPinchDist = null, lastPinchCenter = null;
+  viewport.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+      const t0 = e.touches[0], t1 = e.touches[1];
+      lastPinchDist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+      lastPinchCenter = { x: (t0.clientX + t1.clientX) / 2, y: (t0.clientY + t1.clientY) / 2 };
+      e.preventDefault();
+    }
+  }, { passive: false });
+  viewport.addEventListener('touchmove', (e) => {
+    if (e.touches.length !== 2) return;
+    e.preventDefault();
+    const t0 = e.touches[0], t1 = e.touches[1];
+    const dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+    const center = { x: (t0.clientX + t1.clientX) / 2, y: (t0.clientY + t1.clientY) / 2 };
+    if (lastPinchDist > 0) {
+      const r = viewport.getBoundingClientRect();
+      const mx = center.x - r.left, my = center.y - r.top;
+      const wx = (mx - panX) / zoom, wy = (my - panY) / zoom;
+      zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom * Math.pow(dist / lastPinchDist, 0.6)));
+      panX = mx - wx * zoom; panY = my - wy * zoom;
+    }
+    if (lastPinchCenter) { panX += center.x - lastPinchCenter.x; panY += center.y - lastPinchCenter.y; }
+    lastPinchDist = dist; lastPinchCenter = center; updateTransform();
+  }, { passive: false });
+  viewport.addEventListener('touchend', (e) => { if (e.touches.length < 2) { lastPinchDist = null; lastPinchCenter = null; } });
+
+  const undoStack = [];
+  function saveUndo() {
+    const s = [];
+    world.querySelectorAll('.canvas-el').forEach(el => { s.push({ id: el.id, left: el.style.left, top: el.style.top }); });
+    undoStack.push({ panX, panY, zoom, assets: s });
+    if (undoStack.length > 60) undoStack.shift();
+  }
+  function undo() {
+    if (!undoStack.length) return;
+    const st = undoStack.pop();
+    panX = st.panX; panY = st.panY; zoom = st.zoom;
+    st.assets.forEach(a => { const el = document.getElementById(a.id); if (el) { el.style.left = a.left; el.style.top = a.top; } });
+    updateTransform();
+  }
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
+  });
+
+  function makeDraggable(el) {
+    let dragging = false, sx, sy, ox, oy;
+    el.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      dragging = true; el.classList.add('dragging'); saveUndo();
+      sx = e.clientX; sy = e.clientY;
+      ox = parseFloat(el.style.left); oy = parseFloat(el.style.top);
+      el.setPointerCapture(e.pointerId); e.stopPropagation();
+    });
+    el.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      el.style.left = (ox + (e.clientX - sx) / zoom) + 'px';
+      el.style.top = (oy + (e.clientY - sy) / zoom) + 'px';
+    });
+    el.addEventListener('pointerup', () => { if (dragging) { dragging = false; el.classList.remove('dragging'); } });
+  }
+
+  let _id = 0;
+  function uid(prefix) { return (prefix || 'el') + '-' + (++_id); }
+
+  function addSection(rowY, label) {
+    const parts = label.split(' ');
+    const num = parts[0] || '';
+    const rest = parts.slice(1).join(' ');
+    const el = document.createElement('div');
+    el.className = 'section-header';
+    el.style.left = '60px'; el.style.top = rowY + 'px';
+    el.innerHTML = `<span class="section-line"></span><span class="section-num">${num}</span><span class="section-label">${rest}</span>`;
+    world.appendChild(el);
+    return rowY;
+  }
+  function addTitle(x, y, text, options = {}) {
+    const el = document.createElement('div');
+    el.className = 'canvas-title';
+    el.id = uid('title');
+    el.style.left = x + 'px'; el.style.top = y + 'px';
+    el.style.fontSize = (options.fontSize || 48) + 'px';
+    if (options.fontWeight) el.style.fontWeight = options.fontWeight;
+    if (options.color) el.style.color = options.color;
+    if (options.maxWidth) el.style.maxWidth = options.maxWidth + 'px';
+    el.textContent = text;
+    world.appendChild(el);
+    return el;
+  }
+  function addText(x, y, text, options = {}) {
+    const el = document.createElement('div');
+    el.className = 'canvas-text canvas-el';
+    el.id = uid('text');
+    el.style.left = x + 'px'; el.style.top = y + 'px';
+    el.style.fontSize = (options.fontSize || 14) + 'px';
+    if (options.color) el.style.color = options.color;
+    if (options.maxWidth) el.style.maxWidth = options.maxWidth + 'px';
+    el.textContent = text;
+    world.appendChild(el); makeDraggable(el);
+    return el;
+  }
+  function addTag(x, y, label, options = {}) {
+    const el = document.createElement('div');
+    el.className = 'canvas-el';
+    el.id = uid('tag');
+    el.style.left = x + 'px'; el.style.top = y + 'px';
+    const dotColor = options.color || 'var(--accent)';
+    el.innerHTML = `<div class="canvas-tag"><span class="tag-dot" style="background:${dotColor}"></span>${label}</div>`;
+    world.appendChild(el); makeDraggable(el);
+    return el;
+  }
+  function addContextCard(x, y, w, h, title, content) {
+    const el = document.createElement('div');
+    el.className = 'canvas-el';
+    el.id = uid('ctx');
+    el.style.left = x + 'px'; el.style.top = y + 'px'; el.style.width = w + 'px';
+    if (h) el.style.height = h + 'px';
+    el.innerHTML = `<div class="context-card" style="width:100%;${h ? 'height:100%' : ''}">
+      <div class="card-head"><div class="head-indicator"></div><h3>${title}</h3></div>
+      <div class="card-content">${content}</div></div>`;
+    world.appendChild(el); makeDraggable(el);
+    return el;
+  }
+  function addDesignSystemCard(x, y, w, h, type, data) {
+    const el = document.createElement('div');
+    el.className = 'canvas-el';
+    el.id = uid('ds');
+    el.style.left = x + 'px'; el.style.top = y + 'px'; el.style.width = w + 'px';
+    if (h) el.style.height = h + 'px';
+    let body = '';
+    if (type === 'color' && Array.isArray(data.colors)) {
+      body = `<div class="color-grid">${data.colors.map(c => `<div class="color-chip" style="background:${c.hex}"><span class="chip-label">${c.name || c.hex}</span></div>`).join('')}</div>`;
+    } else if (type === 'typography' && Array.isArray(data.samples)) {
+      body = `<div class="type-stack">${data.samples.map(s => `<div class="type-row"><span class="type-label">${s.label}</span><span class="type-sample" style="font-size:${s.size}px;font-weight:${s.weight || 400}">${s.text || 'Aa'}</span></div>`).join('')}</div>`;
+    } else if (typeof data.html === 'string') {
+      body = data.html;
+    }
+    el.innerHTML = `<div class="ds-card" style="width:100%;${h ? 'height:100%' : ''}">
+      <div class="ds-head">${data.title || type}</div><div class="ds-body">${body}</div></div>`;
+    world.appendChild(el); makeDraggable(el);
+    return el;
+  }
+  function addColorSwatch(x, y, colors) {
+    const el = document.createElement('div');
+    el.className = 'canvas-el';
+    el.id = uid('swatch');
+    el.style.left = x + 'px'; el.style.top = y + 'px';
+    el.innerHTML = `<div class="color-swatch-group">${colors.map(c =>
+      `<div class="swatch-item"><div class="swatch-circle" style="background:${c.hex}"></div><div class="swatch-name">${c.name || ''}</div><div class="swatch-hex">${c.hex}</div></div>`).join('')}</div>`;
+    world.appendChild(el); makeDraggable(el);
+    return el;
+  }
+  function addTypeSample(x, y, samples) {
+    const el = document.createElement('div');
+    el.className = 'canvas-el';
+    el.id = uid('typesample');
+    el.style.left = x + 'px'; el.style.top = y + 'px';
+    el.innerHTML = `<div class="type-sample-group">${samples.map(s =>
+      `<div class="type-sample-row"><span class="type-sample-meta">${s.label}<br>${s.size}px</span><span class="type-sample-text" style="font-size:${s.size}px;font-weight:${s.weight || 400};${s.font ? 'font-family:' + s.font : ''}">${s.text || 'The quick brown fox'}</span></div>`).join('')}</div>`;
+    world.appendChild(el); makeDraggable(el);
+    return el;
+  }
+  let _pageNum = 0;
+  function addPage(x, y, w, h, label, htmlContent) {
+    _pageNum++;
+    const el = document.createElement('div');
+    el.className = 'canvas-el';
+    el.id = uid('page');
+    el.style.left = x + 'px'; el.style.top = y + 'px'; el.style.width = w + 'px'; el.style.height = (h + 40) + 'px';
+    el.innerHTML = `<div class="design-page" style="width:${w}px;height:${h}px;"><div class="page-content">${htmlContent}</div></div>
+      <div class="page-label"><span class="label-num">${String(_pageNum).padStart(2, '0')}</span>${label}</div>`;
+    world.appendChild(el); makeDraggable(el);
+    return el;
+  }
+  function addNote(x, y, tag, text) {
+    const el = document.createElement('div');
+    el.className = 'canvas-el';
+    el.id = uid('note');
+    el.style.left = x + 'px'; el.style.top = y + 'px';
+    el.innerHTML = `<div class="canvas-note"><div class="note-tag">${tag}</div><div class="note-body">${text}</div></div>`;
+    world.appendChild(el); makeDraggable(el);
+    return el;
+  }
+  function addDiagram(x, y, w, h, htmlContent) {
+    const el = document.createElement('div');
+    el.className = 'canvas-el';
+    el.id = uid('diagram');
+    el.style.left = x + 'px'; el.style.top = y + 'px'; el.style.width = w + 'px'; el.style.height = h + 'px';
+    el.innerHTML = `<div class="canvas-diagram" style="width:100%;height:100%;"><div class="diagram-content">${htmlContent}</div></div>`;
+    world.appendChild(el); makeDraggable(el);
+    return el;
+  }
+  function below(el, gap) { if (gap === undefined) gap = 20; return parseFloat(el.style.top) + el.offsetHeight + gap; }
+  function rightOf(el, gap) { if (gap === undefined) gap = 20; return parseFloat(el.style.left) + el.offsetWidth + gap; }
+  function maxY(els, gap) { if (gap === undefined) gap = 20; return Math.max(...els.map(e => parseFloat(e.style.top) + e.offsetHeight)) + gap; }
+  function maxX(els, gap) { if (gap === undefined) gap = 20; return Math.max(...els.map(e => parseFloat(e.style.left) + e.offsetWidth)) + gap; }
+
+  window.canvas = { addSection, addTitle, addText, addTag, addContextCard, addDesignSystemCard, addColorSwatch, addTypeSample, addPage, addNote, addDiagram, below, rightOf, maxY, maxX };
+
+  /* =====================================================================
+     SCENE — eye see · Real-Time AI Environment Describer
+     ===================================================================== */
+  function initScene() {
+
+    /* ── Row 1 · Project context ── */
+    addSection(40, UI_STRINGS.sections.context);
+
+    const r1Title = addTitle(90, 96, 'eye see', { fontSize: 72, fontWeight: 900 });
+    const r1Desc = addText(90, below(r1Title, 14),
+      'Real-Time AI Environment Describer — a camera-first assistant that narrates the world for blind and low-vision people. The phone they already carry becomes a private, always-available describer.', { fontSize: 16, maxWidth: 540 });
+
+    const tagsY = below(r1Desc, 18);
+    const tag1 = addTag(90, tagsY, 'Camera + Vision AI');
+    const tag2 = addTag(rightOf(tag1, 8), tagsY, 'Spatial audio cues');
+    const tag3 = addTag(rightOf(tag2, 8), tagsY, 'Offline-ready');
+    const tag4 = addTag(rightOf(tag3, 8), tagsY, 'Multilingual');
+    addTag(rightOf(tag4, 8), tagsY, 'WCAG 2.2 AA');
+
+    const cardsY = below(tag1, 28);
+    const card1 = addContextCard(90, cardsY, 340, null, 'What it is',
+      '<p>The camera feed becomes spoken understanding. Scenes, signs, objects, people and obstacles are narrated in natural language, with spatial-audio cues for direction and distance.</p>');
+    const card2 = addContextCard(rightOf(card1, 24), cardsY, 340, null, 'Who it is for',
+      '<p>Blind and low-vision users who want to move through the world independently. Caregivers get a live, spoken picture of a loved one\u2019s surroundings.</p>');
+    const card3 = addContextCard(rightOf(card2, 24), cardsY, 340, null, 'Problem → solution',
+      '<p>Asking a sighted person for help builds dependence. eye see turns everyday moments — crossing a street, reading a menu — into something a user can handle alone.</p>');
+
+    const notesY = maxY([card1, card2, card3], 28);
+    const note1 = addNote(90, notesY, 'Design philosophy',
+      'Signage-grade contrast. The UI borrows the visual language of public wayfinding — black text on safety orange, high-vis yellow — because legibility is the product.');
+    const note2 = addNote(rightOf(note1, 20), notesY, 'Differentiator',
+      'Voice-first, not camera-first. The spoken output matters more than the pixels, so the camera feed sits dimmed behind a large, readable narration.');
+
+    const flowY = below(note1, 28);
+    const flow = addDiagram(90, flowY, 700, 120, `
+      <div style="display:flex;align-items:center;gap:0;height:100%;font-family:'Archivo',system-ui,sans-serif;">
+        ${['Point camera','Vision AI sees','Narrate in language','Spatial audio + speech','Adjust detail'].map((s,i)=>`
+          <div style="flex:1;display:flex;align-items:center;gap:8px;">
+            <div style="background:#1e1e1d;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px 14px;flex:1;text-align:center;">
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#FF4D00;letter-spacing:0.08em;margin-bottom:4px;">0${i+1}</div>
+              <div style="font-size:13px;font-weight:600;color:#e8e6e3;">${s}</div>
+            </div>
+            ${i<4?'<span style="color:#6a6b6c;font-size:14px;">→</span>':''}
+          </div>`).join('')}
+      </div>`);
+
+    /* ── Row 2 · Design system ── */
+    const r2Start = maxY([card1, card2, card3, note1, note2, flow], 90);
+    addSection(r2Start, UI_STRINGS.sections.designSystem);
+
+    const dsY = r2Start + 60;
+
+    const colorCard = addDesignSystemCard(90, dsY, 460, null, 'color', {
+      title: 'Color palette',
+      html: `<div class="color-swatch-group" style="flex-wrap:wrap;gap:16px;">
+        <div class="swatch-item"><div class="swatch-circle" style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.08)"></div><div class="swatch-name">Background</div><div class="swatch-hex">#FFFFFF</div></div>
+        <div class="swatch-item"><div class="swatch-circle" style="background:#111111"></div><div class="swatch-name">Ink</div><div class="swatch-hex">#111111</div></div>
+        <div class="swatch-item"><div class="swatch-circle" style="background:#F4F1EB"></div><div class="swatch-name">Surface</div><div class="swatch-hex">#F4F1EB</div></div>
+        <div class="swatch-item"><div class="swatch-circle" style="background:#FF4D00"></div><div class="swatch-name">Accent</div><div class="swatch-hex">#FF4D00</div></div>
+        <div class="swatch-item"><div class="swatch-circle" style="background:#FFC400"></div><div class="swatch-name">Signal</div><div class="swatch-hex">#FFC400</div></div>
+        <div class="swatch-item"><div class="swatch-circle" style="background:#16A34A"></div><div class="swatch-name">Success</div><div class="swatch-hex">#16A34A</div></div>
+        <div class="swatch-item"><div class="swatch-circle" style="background:#DC2626"></div><div class="swatch-name">Danger</div><div class="swatch-hex">#DC2626</div></div>
+      </div>
+      <p style="font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(232,230,227,0.5);margin-top:20px;">Orange = fills with black text (6.2:1) · Yellow = live status (11:1) · dark theme mirrors tokens</p>`
+    });
+
+    const typeCard = addDesignSystemCard(rightOf(colorCard, 24), dsY, 400, null, 'typography', {
+      title: 'Typography',
+      html: `<div class="type-sample-group">
+        <div class="type-sample-row"><span class="type-sample-meta">Display<br>34px</span><span class="type-sample-text" style="font-size:34px;font-weight:800;font-family:'Archivo',sans-serif;">See with your ears</span></div>
+        <div class="type-sample-row"><span class="type-sample-meta">Heading<br>22px</span><span class="type-sample-text" style="font-size:22px;font-weight:700;font-family:'Archivo',sans-serif;">Live description</span></div>
+        <div class="type-sample-row"><span class="type-sample-meta">Body<br>16px</span><span class="type-sample-text" style="font-size:16px;font-weight:500;font-family:'Archivo',sans-serif;">A bench is two meters to your left.</span></div>
+        <div class="type-sample-row"><span class="type-sample-meta">Label<br>11px</span><span class="type-sample-text" style="font-size:11px;font-weight:700;letter-spacing:0.08em;font-family:'JetBrains Mono',monospace;color:#FF4D00;">LIVE · DETAILED</span></div>
+      </div>`
+    });
+
+    const compCard = addDesignSystemCard(rightOf(typeCard, 24), dsY, 300, null, 'components', {
+      title: 'Components',
+      html: `<div style="display:flex;flex-direction:column;gap:10px;font-family:'Archivo',sans-serif;">
+        <div style="min-height:48px;border-radius:12px;background:#FF4D00;color:#111;font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:center;">Describe my surroundings</div>
+        <div style="min-height:48px;border-radius:12px;background:#1e1e1d;border:1.5px solid rgba(255,255,255,0.16);color:#e8e6e3;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;">Read text</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;background:#24221e;border-radius:11px;padding:5px;">
+          <div style="height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#6a6b6c;">Brief</div>
+          <div style="height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#6a6b6c;">Standard</div>
+          <div style="height:34px;border-radius:8px;background:#FFC400;color:#111;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">Detailed</div>
+        </div>
+      </div>`
+    });
+
+    const stateCard = addDesignSystemCard(rightOf(compCard, 24), dsY, 300, null, 'components', {
+      title: 'States',
+      html: `<div style="display:flex;flex-direction:column;gap:10px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:rgba(232,230,227,0.7);">
+        <div style="display:flex;align-items:center;gap:8px;"><span style="width:9px;height:9px;border-radius:50%;background:#16A34A;"></span>Idle / ready</div>
+        <div style="display:flex;align-items:center;gap:8px;"><span style="width:9px;height:9px;border-radius:50%;background:#FF4D00;"></span>Listening / describing</div>
+        <div style="display:flex;align-items:center;gap:8px;"><span style="width:9px;height:9px;border-radius:50%;background:#FFC400;"></span>Offline · on-device</div>
+        <div style="display:flex;align-items:center;gap:8px;"><span style="width:9px;height:9px;border-radius:50%;background:#DC2626;"></span>Camera unavailable</div>
+        <div style="display:flex;align-items:center;gap:8px;"><span style="width:9px;height:9px;border-radius:50%;background:#5E5B54;"></span>Empty / first use</div>
+      </div>`
+    });
+
+    /* ── Row 3 · Design deliverables ── */
+    const r3Start = maxY([colorCard, typeCard, compCard, stateCard], 90);
+    addSection(r3Start, UI_STRINGS.sections.deliverables);
+    addNote(60, r3Start + 54, 'Reading order', 'Left to right = the user journey: onboarding → live camera (indoor / outdoor toggle) → indoor mode → describe → read / radar → route preview → Google Maps guidance. Watch companion last.');
+
+    const pagesY = r3Start + 130;
+    const PW = 390, PH = 780, GAP = 48;
+    let px = 90;
+
+    const pages = [];
+    pages.push(addPage(px, pagesY, PW, PH, 'Onboarding', `
+      <div class="pg">
+        <div class="pg-bar"><span>9:41</span><span style="letter-spacing:0.08em;text-transform:uppercase;">Setup</span></div>
+        <div class="pg-body" style="justify-content:space-between;">
+          <div>
+            <div class="pg-title" style="font-size:40px;">See with<br>your ears.</div>
+            <div class="pg-sub" style="padding:12px 0 0;">eye see narrates what\u2019s around you — scenes, signs, objects and obstacles — out loud, the moment you point your camera.</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div class="pg-card"><div class="lbl">1 · Permissions</div><div style="font-size:14px;font-weight:600;">Camera · Microphone · Location</div><div class="pg-note" style="margin-top:2px;">Used on-device when offline.</div></div>
+            <div class="pg-card"><div class="lbl">2 · Language</div><div style="font-size:14px;font-weight:600;">English · Español · 中文 · 日本語</div></div>
+            <div class="pg-card"><div class="lbl">3 · Default narration</div><div class="pg-seg" style="margin-top:6px;"><button>Brief</button><button>Standard</button><button class="on">Detailed</button></div></div>
+          </div>
+          <div class="pg-btn">Continue</div>
+        </div>
+      </div>`));
+    px += PW + GAP;
+
+    pages.push(addPage(px, pagesY, PW, PH, 'Live camera · home', `
+      <div class="pg">
+        <div class="pg-bar"><span>9:41</span><span style="display:inline-flex;align-items:center;gap:6px;"><span class="pg-chip on">Outdoor · Detailed</span></span><span>⌁ 100%</span></div>
+        <div class="pg-body">
+          <div class="pg-seg" style="grid-template-columns:repeat(2,1fr);"><button>Indoor</button><button class="on">Outdoor</button></div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#8A857B;margin:2px 2px 0;">Google Maps routing active in outdoor mode</div>
+          <div class="pg-cam">
+            <div class="det" style="left:14%;top:26%;width:26%;height:30%;"><span class="dt">BENCH</span></div>
+            <div class="det" style="left:62%;top:42%;width:24%;height:44%;"><span class="dt">PERSON</span></div>
+            <div class="det" style="left:34%;top:68%;width:34%;height:10%;"><span class="dt">CURB EDGE</span></div>
+            <div style="position:absolute;left:12px;right:12px;bottom:14px;background:#fff;border-radius:12px;padding:12px 14px;box-shadow:0 8px 24px rgba(0,0,0,0.25);">
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#8A857B;margin-bottom:6px;">Live description</div>
+              <div style="font-size:16px;font-weight:500;line-height:1.45;">Sidewalk ahead. A bench on your left, two meters. A crosswalk is straight ahead, six meters.</div>
+            </div>
+          </div>
+          <div class="pg-seg"><button>Brief</button><button>Standard</button><button class="on">Detailed</button></div>
+          <div class="pg-btn">Describe my surroundings</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+            <div class="pg-btn ghost" style="font-size:12px;min-height:44px;">Read text</div>
+            <div class="pg-btn ghost" style="font-size:12px;min-height:44px;">Radar</div>
+            <div class="pg-btn ghost" style="font-size:12px;min-height:44px;">Navigate</div>
+          </div>
+        </div>
+      </div>`));
+    px += PW + GAP;
+
+    pages.push(addPage(px, pagesY, PW, PH, 'Indoor mode · bathroom', `
+      <div class="pg">
+        <div class="pg-bar"><span>9:41</span><span style="display:inline-flex;align-items:center;gap:6px;"><span class="pg-chip on">Indoor · Detailed</span></span><span>⌁</span></div>
+        <div class="pg-body">
+          <div class="pg-seg" style="grid-template-columns:repeat(2,1fr);"><button class="on">Indoor</button><button>Outdoor</button></div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#8A857B;margin:2px 2px 0;">Household items · Google Maps off</div>
+          <div class="pg-cam">
+            <div class="det" style="left:18%;top:22%;width:30%;height:24%;"><span class="dt">SINK</span></div>
+            <div class="det" style="left:8%;top:52%;width:24%;height:34%;"><span class="dt">TOILET</span></div>
+            <div class="det" style="left:66%;top:48%;width:26%;height:40%;"><span class="dt">SHOWER</span></div>
+            <div style="position:absolute;left:12px;right:12px;bottom:14px;background:#fff;border-radius:12px;padding:12px 14px;box-shadow:0 8px 24px rgba(0,0,0,0.25);">
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#FF4D00;margin-bottom:6px;">Live description · indoor</div>
+              <div style="font-size:16px;font-weight:500;line-height:1.45;">You're in a bathroom. The sink is straight ahead at the counter. The toilet is to your left. The shower is in the far right corner. The floor may be wet — step carefully.</div>
+            </div>
+          </div>
+          <div class="pg-btn">Describe my surroundings</div>
+          <div class="pg-note">Indoor mode reads household layout, furniture and items. Navigation is disabled — Google Maps only activates in outdoor mode.</div>
+        </div>
+      </div>`));
+    px += PW + GAP;
+
+    pages.push(addPage(px, pagesY, PW, PH, 'Describing', `
+      <div class="pg">
+        <div class="pg-bar"><span>9:41</span><span class="pg-chip on">Describing…</span><span>⌁ 100%</span></div>
+        <div class="pg-body">
+          <div class="pg-cam">
+            <div class="det" style="left:14%;top:26%;width:26%;height:30%;"><span class="dt">BENCH</span></div>
+            <div class="det" style="left:62%;top:42%;width:24%;height:44%;"><span class="dt">PERSON</span></div>
+            <div style="position:absolute;left:12px;right:12px;bottom:14px;background:#fff;border-radius:12px;padding:12px 14px;box-shadow:0 8px 24px rgba(0,0,0,0.25);">
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#FF4D00;margin-bottom:6px;">● Processing scene</div>
+              <div style="font-size:16px;font-weight:500;line-height:1.45;color:#8A857B;">Identifying objects and reading the layout…</div>
+            </div>
+          </div>
+          <div class="pg-btn" style="background:#FFC400;">Listening — hold steady</div>
+          <div class="pg-note">Spatial audio plays a rising tone as an obstacle approaches; direction pans left / right through the headset.</div>
+        </div>
+      </div>`));
+    px += PW + GAP;
+
+    pages.push(addPage(px, pagesY, PW, PH, 'Transcript history', `
+      <div class="pg">
+        <div class="pg-bar"><span>9:41</span><span style="letter-spacing:0.08em;text-transform:uppercase;">History</span></div>
+        <div class="pg-title">Recent descriptions</div>
+        <div class="pg-body" style="padding-top:12px;">
+          <div class="pg-card"><div class="lbl">9:41 · Today</div><div style="font-size:14px;font-weight:500;line-height:1.5;">Sidewalk ahead. A bench on your left…</div></div>
+          <div class="pg-card"><div class="lbl">9:32 · Today</div><div style="font-size:14px;font-weight:500;line-height:1.5;">Cafe counter. Menu: filter coffee, oat flat white…</div></div>
+          <div class="pg-card"><div class="lbl">8:55 · Today</div><div style="font-size:14px;font-weight:500;line-height:1.5;">Platform 2. Southbound train, next in 12 minutes.</div></div>
+          <div class="pg-row" style="margin-top:auto;">
+            <div class="pg-btn ghost" style="flex:1;font-size:13px;">Replay</div>
+            <div class="pg-btn ghost" style="flex:1;font-size:13px;">Clear all</div>
+          </div>
+        </div>
+      </div>`));
+    px += PW + GAP;
+
+    pages.push(addPage(px, pagesY, PW, PH, 'Text & sign reader', `
+      <div class="pg">
+        <div class="pg-bar"><span>9:41</span><span style="letter-spacing:0.08em;text-transform:uppercase;">Read text</span></div>
+        <div class="pg-body">
+          <div class="pg-cam" style="min-height:180px;">
+            <div class="det" style="left:18%;top:30%;width:64%;height:30%;"><span class="dt">SIGN · READ ALOUD</span></div>
+          </div>
+          <div class="pg-card"><div class="lbl">Detected sign</div><div style="font-size:16px;font-weight:500;line-height:1.5;">“Platform 2 — Southbound trains. Next departure: 12 minutes.”</div></div>
+          <div class="pg-card"><div class="lbl">Detected menu</div><div style="font-size:16px;font-weight:500;line-height:1.5;">“Filter coffee $3.50 · Oat flat white $4.20”</div></div>
+          <div class="pg-note">Point at any sign, menu or document — eye see reads it aloud and guides you to frame it.</div>
+        </div>
+      </div>`));
+    px += PW + GAP;
+
+    pages.push(addPage(px, pagesY, PW, PH, 'Object radar', `
+      <div class="pg">
+        <div class="pg-bar"><span>9:41</span><span style="letter-spacing:0.08em;text-transform:uppercase;">Radar</span></div>
+        <div class="pg-title">Objects nearby</div>
+        <div class="pg-body" style="padding-top:12px;">
+          <div class="pg-li"><span class="ic" style="background:#FF4D00;color:#fff;"><svg class="pg-ic i-svg" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></span><div style="flex:1;"><div class="nm">Curb edge</div><div class="mt">Ahead · step down</div></div><span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;">1 m</span></div>
+          <div class="pg-li"><span class="ic"><svg class="pg-ic i-svg" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></span><div style="flex:1;"><div class="nm">Bench</div><div class="mt">Left · open space beside it</div></div><span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;">2 m</span></div>
+          <div class="pg-li"><span class="ic"><svg class="pg-ic i-svg" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></span><div style="flex:1;"><div class="nm">Person</div><div class="mt">Right · moving away</div></div><span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;">3 m</span></div>
+          <div class="pg-li"><span class="ic"><svg class="pg-ic i-svg" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span><div style="flex:1;"><div class="nm">Crosswalk</div><div class="mt">Ahead · audible signal pole</div></div><span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;">6 m</span></div>
+        </div>
+      </div>`));
+    px += PW + GAP;
+
+    pages.push(addPage(px, pagesY, PW, PH, 'Detail level', `
+      <div class="pg">
+        <div class="pg-bar"><span>9:41</span><span style="letter-spacing:0.08em;text-transform:uppercase;">Narration detail</span></div>
+        <div class="pg-title">How much to say</div>
+        <div class="pg-body" style="padding-top:12px;">
+          <div class="pg-card" style="border:2px solid #FFC400;"><div class="lbl">Detailed — current</div><div style="font-size:13px;font-weight:500;line-height:1.5;">Full scene: distances, directions, moving objects and hazards. Best for unfamiliar places.</div></div>
+          <div class="pg-card"><div class="lbl">Standard</div><div style="font-size:13px;font-weight:500;line-height:1.5;">Key objects and their direction, without fine distances.</div></div>
+          <div class="pg-card"><div class="lbl">Brief</div><div style="font-size:13px;font-weight:500;line-height:1.5;">Essentials only — “bench left, crosswalk ahead.”</div></div>
+          <div class="pg-row" style="margin-top:auto;">
+            <div class="pg-btn ghost" style="flex:1;font-size:13px;">Speech rate</div>
+            <div class="pg-btn" style="flex:1;font-size:13px;">Apply</div>
+          </div>
+        </div>
+      </div>`));
+    px += PW + GAP;
+
+    pages.push(addPage(px, pagesY, PW, PH, 'Route preview', `
+      <div class="pg">
+        <div class="pg-bar"><span>9:41</span><span class="pg-chip">Google Maps</span></div>
+        <div class="pg-title">Where to?</div>
+        <div class="pg-body">
+          <div class="pg-card"><div class="lbl">Destination</div><div style="font-size:18px;font-weight:800;">Riverside Cafe</div><div style="font-size:12px;color:#5E5B54;margin-top:2px;">12 Bridge St · voice or type</div></div>
+          <div style="height:170px;border-radius:14px;background:#E8E4DC;overflow:hidden;position:relative;">
+            <svg viewBox="0 0 320 170" preserveAspectRatio="none" style="width:100%;height:100%;display:block;">
+              <path d="M0 120 H320 M90 0 V170 M220 0 V170 M0 50 H320" stroke="#D5CEC2" stroke-width="7" fill="none"/>
+              <path d="M40 120 L90 120 L90 50 L260 50 L260 28" stroke="#FF4D00" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M40 120 L90 120 L90 50 L300 50" stroke="#B9B0A0" stroke-width="4" fill="none" stroke-linecap="round" stroke-dasharray="5 6"/>
+              <circle cx="40" cy="120" r="8" fill="#111111" stroke="#fff" stroke-width="3"/>
+              <circle cx="260" cy="28" r="8" fill="#FF4D00" stroke="#fff" stroke-width="3"/>
+            </svg>
+          </div>
+          <div class="pg-card" style="border:2px solid #FFC400;"><div class="lbl">Fastest · recommended</div><div style="font-size:15px;font-weight:700;">12 min · 1.4 km</div></div>
+          <div class="pg-card"><div class="lbl">Accessible</div><div style="font-size:15px;font-weight:700;">15 min · avoids steps</div></div>
+          <div class="pg-btn" style="margin-top:auto;">Start guidance</div>
+        </div>
+      </div>`));
+    px += PW + GAP;
+
+    pages.push(addPage(px, pagesY, PW, PH, 'Google Maps guidance', `
+      <div class="pg">
+        <div class="pg-bar"><span>9:41</span><span class="pg-chip on">Recalculating…</span></div>
+        <div class="pg-body">
+          <div style="height:210px;border-radius:14px;background:#E8E4DC;overflow:hidden;position:relative;">
+            <svg viewBox="0 0 320 210" preserveAspectRatio="none" style="width:100%;height:100%;display:block;">
+              <path d="M0 150 H320 M90 0 V210 M220 0 V210 M0 60 H320" stroke="#D5CEC2" stroke-width="7" fill="none"/>
+              <path d="M50 150 L90 150 L90 60 L260 60 L260 30" stroke="#FF4D00" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="50" cy="150" r="9" fill="#111111" stroke="#fff" stroke-width="3"/>
+              <circle cx="260" cy="30" r="8" fill="#FF4D00" stroke="#fff" stroke-width="3"/>
+            </svg>
+            <div style="position:absolute;top:10px;left:10px;background:#fff;border-radius:8px;padding:5px 9px;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:0.06em;color:#5E5B54;box-shadow:0 2px 8px rgba(0,0,0,0.12);">LIVE · GOOGLE MAPS</div>
+          </div>
+          <div style="background:#FF4D00;color:#111;border-radius:14px;padding:14px 16px;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;opacity:0.7;">Next turn · 200 m</div>
+            <div style="font-size:21px;font-weight:800;margin-top:3px;">Turn right onto Main St</div>
+          </div>
+          <div class="pg-row" style="gap:8px;">
+            <div class="pg-card" style="flex:1;padding:10px 12px;"><div class="lbl">Arrive</div><div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;">10:03</div></div>
+            <div class="pg-card" style="flex:1;padding:10px 12px;"><div class="lbl">Time</div><div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;">6 min</div></div>
+            <div class="pg-card" style="flex:1;padding:10px 12px;"><div class="lbl">Distance</div><div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;">1.4 km</div></div>
+          </div>
+          <div class="pg-note">Google Maps Directions API + Navigation SDK drive live turn-by-turn voice and traffic-aware rerouting; eye see layers obstacle narration on top.</div>
+        </div>
+      </div>`));
+    px += PW + GAP;
+
+    pages.push(addPage(px, pagesY, PW, PH, 'Settings', `
+      <div class="pg">
+        <div class="pg-bar"><span>9:41</span><span style="letter-spacing:0.08em;text-transform:uppercase;">Settings</span></div>
+        <div class="pg-title">Preferences</div>
+        <div class="pg-body" style="padding-top:12px;">
+          <div class="pg-li"><span class="ic"><svg class="pg-ic i-svg" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18M12 3a9 9 0 0 1 0 18M3.5 9h17M3.5 15h17"/></svg></span><div style="flex:1;"><div class="nm">Language</div><div class="mt">English · auto-detect signs</div></div></div>
+          <div class="pg-li"><span class="ic"><svg class="pg-ic i-svg" viewBox="0 0 24 24"><path d="M12 6v12M8 8v8M16 8v8"/></svg></span><div style="flex:1;"><div class="nm">Speech rate</div><div class="mt">1.0× · voice “Warm”</div></div></div>
+          <div class="pg-li"><span class="ic"><svg class="pg-ic i-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></span><div style="flex:1;"><div class="nm">High-contrast UI</div><div class="mt">On · larger text</div></div></div>
+          <div class="pg-li"><span class="ic"><svg class="pg-ic i-svg" viewBox="0 0 24 24"><path d="M3 7h18M5 7V5h14v2M8 7v11M16 7v11M4 21h16"/></svg></span><div style="flex:1;"><div class="nm">Offline model</div><div class="mt">English pack · 1.2 GB · installed</div></div></div>
+        </div>
+      </div>`));
+    px += PW + GAP;
+
+    pages.push(addPage(px, pagesY, PW, PH, 'Permission denied', `
+      <div class="pg">
+        <div class="pg-bar"><span>9:41</span><span style="letter-spacing:0.08em;text-transform:uppercase;">Camera</span></div>
+        <div class="pg-body" style="justify-content:center;align-items:center;text-align:center;">
+          <div style="width:64px;height:64px;border-radius:18px;background:#F4F1EB;display:grid;place-items:center;color:#DC2626;margin-bottom:16px;"><svg class="pg-ic i-svg" style="width:30px;height:30px;" viewBox="0 0 24 24"><path d="M2 8.5a2 2 0 0 1 2-2h3l2-2.5h6l2 2.5h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2z"/><path d="M3 3l18 18"/></svg></div>
+          <div class="pg-title" style="font-size:24px;padding:0;">Camera access needed</div>
+          <div class="pg-sub" style="max-width:260px;">eye see can\u2019t describe what it can\u2019t see. Enable camera access to continue.</div>
+          <div class="pg-btn" style="width:100%;margin-top:18px;">Enable camera</div>
+          <div class="pg-note" style="margin-top:8px;">Not now — use voice-only mode</div>
+        </div>
+      </div>`));
+    px += PW + GAP;
+
+    pages.push(addPage(px, pagesY, PW, PH, 'Wearable companion', `
+      <div class="pg dark">
+        <div class="pg-bar"><span style="display:flex;align-items:center;gap:6px;"><span class="pg-chip on">Watch</span></span><span>⌁</span></div>
+        <div class="pg-body" style="justify-content:center;align-items:center;text-align:center;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#FF4D00;margin-bottom:10px;">Glance · 1 message</div>
+          <div style="font-size:20px;font-weight:800;line-height:1.25;max-width:240px;">Bench on your left, 2 meters.</div>
+          <div style="margin-top:20px;display:flex;gap:14px;align-items:center;color:#A19E96;">
+            <div style="width:52px;height:52px;border-radius:50%;background:#FF4D00;color:#0F0F0F;display:grid;place-items:center;"><svg class="pg-ic i-svg" style="width:22px;height:22px;" viewBox="0 0 24 24"><path d="M2 8.5a2 2 0 0 1 2-2h3l2-2.5h6l2 2.5h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3"/></svg></div>
+            <div style="text-align:left;"><div style="font-size:12px;font-weight:700;color:#fff;">Tap to describe</div><div style="font-size:11px;color:#7A756C;">hands-free</div></div>
+          </div>
+        </div>
+      </div>`));
+    px += PW + GAP;
+  }
+
+  initScene();
+
+  const r = viewport.getBoundingClientRect();
+  panX = r.width * 0.04;
+  panY = r.height * 0.04;
+  updateTransform();
+})();
+</script>
+</body>
+</html>

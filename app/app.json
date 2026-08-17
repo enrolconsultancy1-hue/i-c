@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "eye see",
+    "slug": "eye-see",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#FFFFFF",
+    "splash": {
+      "backgroundColor": "#FFFFFF"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "eye see uses the camera to describe your surroundings and read text."
+      }
+    },
+    "android": {
+      "permissions": ["CAMERA", "ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "eye see uses the camera to describe your surroundings and read text.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "eye see uses your location for navigation."
+        }
+      ]
+    ]
+  }
+}

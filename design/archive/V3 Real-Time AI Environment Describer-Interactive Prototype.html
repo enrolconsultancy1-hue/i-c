@@ -1,0 +1,798 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>ClearSight · Live View</title>
+<!--
+  Discovery:
+    deliverable: interactive prototype — single live-camera screen (mobile-first, responsive to tablet/desktop)
+    audience: blind & low-vision users (voice-first), caregivers
+    direction: Accessible & Bold — signage-grade high contrast (light primary + dark theme)
+    sections: status strip / camera viewport / spatial-audio markers / narration / describe CTA / detail control / quick actions
+    tokens: design-systems/bold (Archivo + JetBrains Mono) · accent #FF4D00 (user-selected palette) · signal #FFC400
+    states: idle / listening / describing / described / offline / light-dark
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FFFFFF;
+    --surface: #F4F1EB;
+    --surface-2: #ECE7DD;
+    --ink: #111111;
+    --ink-soft: #3F3D39;
+    --ink-muted: #5E5B54;
+    --border: #D9D2C5;
+    --border-strong: #B9B0A0;
+    --accent: #FF4D00;          /* safety orange — signage fill, black text on top */
+    --accent-ink: #111111;
+    --accent-deep: #C23A00;     /* darker orange for small-text on light */
+    --signal: #FFC400;          /* high-vis yellow — live/status band */
+    --signal-ink: #111111;
+    --success: #16A34A;
+    --danger: #DC2626;
+    --scrim: rgba(17,17,17,0.28);
+    --focus-ring: 0 0 0 3px rgba(255,77,0,0.45);
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-pill: 9999px;
+    --ease: cubic-bezier(0.2, 0, 0, 1);
+    --font-display: 'Archivo', 'Archivo Fallback', -apple-system, system-ui, sans-serif;
+    --font-body: 'Archivo', 'Archivo Fallback', -apple-system, system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  [data-theme="dark"] {
+    --bg: #0F0F0F;
+    --surface: #1A1917;
+    --surface-2: #24221E;
+    --ink: #FFFFFF;
+    --ink-soft: #CFCDC7;
+    --ink-muted: #A19E96;
+    --border: #2E2C27;
+    --border-strong: #4A463E;
+    --accent: #FF5A1A;
+    --accent-ink: #0F0F0F;
+    --accent-deep: #FF7A45;
+    --signal: #FFC400;
+    --signal-ink: #0F0F0F;
+    --scrim: rgba(0,0,0,0.38);
+    --focus-ring: 0 0 0 3px rgba(255,90,26,0.5);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100dvh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    display: grid;
+    place-items: stretch;
+  }
+
+  /* ===== app surface ===== */
+  .app {
+    position: relative;
+    width: min(100%, 430px);
+    min-height: 100dvh;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    overflow: hidden;
+  }
+  @media (min-width: 768px) {
+    body { background: #E7E3DA; padding: 24px; place-items: center; }
+    [data-theme="dark"] body { background: #080808; }
+    .app {
+      min-height: 0;
+      height: min(860px, calc(100dvh - 48px));
+      border-radius: 44px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.28);
+      border: 1px solid var(--border);
+    }
+  }
+
+  /* ===== status bar ===== */
+  .statusbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: calc(env(safe-area-inset-top, 0px) + 12px) 16px 10px;
+    z-index: 5;
+  }
+  .sb-time { font-family: var(--font-mono); font-size: 14px; font-weight: 700; letter-spacing: 0.01em; }
+  .sb-modes { flex: 1; display: flex; justify-content: center; }
+  .mode-chip {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 5px 10px;
+    border-radius: var(--radius-pill);
+    border: 1.5px solid var(--border-strong);
+    color: var(--ink-muted);
+    background: transparent;
+  }
+  .mode-chip.live {
+    color: var(--signal-ink);
+    background: var(--signal);
+    border-color: var(--signal);
+  }
+  .sb-right { display: flex; align-items: center; gap: 8px; }
+  .icon-btn {
+    width: 44px; height: 44px;
+    display: grid; place-items: center;
+    border: none; border-radius: var(--radius-md);
+    background: transparent; color: var(--ink);
+    cursor: pointer;
+    transition: background var(--ease) 150ms, transform 60ms;
+  }
+  .icon-btn:hover { background: var(--surface-2); }
+  .icon-btn:active { transform: scale(0.94); }
+  .icon-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+  .icon-btn svg { width: 22px; height: 22px; }
+  .sb-stat {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+    color: var(--ink-muted); letter-spacing: 0.02em;
+  }
+  .sb-stat.off { color: var(--accent-deep); }
+  .sb-stat svg { width: 15px; height: 15px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
+  .sb-stat.off .dot { background: var(--accent); }
+
+  /* ===== offline banner ===== */
+  .banner {
+    display: none;
+    align-items: center; gap: 10px;
+    margin: 0 16px 8px;
+    padding: 10px 14px;
+    border-radius: var(--radius-md);
+    background: var(--signal);
+    color: var(--signal-ink);
+    font-size: 13px; font-weight: 600; line-height: 1.4;
+  }
+  .banner.show { display: flex; }
+  .banner svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .banner .b-msg { flex: 1; }
+  .banner .b-tag {
+    font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    border: 1.5px solid var(--signal-ink); border-radius: 6px; padding: 2px 6px;
+  }
+
+  /* ===== camera viewport ===== */
+  .camera {
+    position: relative;
+    flex: 1;
+    min-height: 420px;
+    margin: 0 16px;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background:
+      radial-gradient(120% 90% at 50% 18%, #CBBBA6 0%, #8E806C 46%, #4C443A 100%);
+    isolation: isolate;
+  }
+  [data-theme="dark"] .camera {
+    background:
+      radial-gradient(120% 90% at 50% 18%, #3A352E 0%, #241F1A 46%, #100E0C 100%);
+  }
+  .camera::after { /* grain */
+    content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: 0.10;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 220px 220px;
+    mix-blend-mode: overlay;
+  }
+  .camera .vig { position: absolute; inset: 0; z-index: 2; pointer-events: none;
+    box-shadow: inset 0 0 80px rgba(0,0,0,0.55); }
+
+  /* detection boxes */
+  .det { position: absolute; z-index: 3; border: 2px solid var(--signal); border-radius: 4px; }
+  .det .det-tag {
+    position: absolute; top: -24px; left: -2px;
+    font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: 0.03em;
+    background: var(--signal); color: var(--signal-ink);
+    padding: 2px 7px; border-radius: 4px; white-space: nowrap;
+  }
+  .det .det-dist {
+    position: absolute; bottom: -20px; right: -2px;
+    font-family: var(--font-mono); font-size: 10px; font-weight: 500;
+    color: #FFFFFF; background: rgba(17,17,17,0.62);
+    padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+  }
+
+  /* spatial-audio direction markers */
+  .spatial {
+    position: absolute; z-index: 4; left: 50%; bottom: 18px;
+    transform: translateX(-50%);
+    display: flex; gap: 10px; align-items: center;
+  }
+  .sp-dir {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase; color: #FFFFFF;
+  }
+  .sp-dir .sp-arc {
+    width: 30px; height: 22px;
+    display: grid; place-items: center;
+    background: rgba(17,17,17,0.55);
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.28);
+  }
+  .sp-dir .sp-arc svg { width: 18px; height: 18px; }
+  .sp-dir.pulse .sp-arc { background: var(--accent); border-color: var(--accent); }
+  .sp-dir.pulse .sp-arc svg { color: #FFFFFF; }
+
+  /* narration card */
+  .narration {
+    position: absolute; z-index: 5; left: 12px; right: 12px; bottom: 78px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 14px 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.22);
+  }
+  .narration .n-eyebrow {
+    display: flex; align-items: center; gap: 7px;
+    font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-muted);
+    margin-bottom: 8px;
+  }
+  .narration .n-eyebrow .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
+  .narration .n-eyebrow.pending .live-dot { background: var(--accent); animation: blink 900ms steps(2, start) infinite; }
+  .narration p {
+    font-size: 17px; line-height: 1.5; font-weight: 500; letter-spacing: 0;
+    color: var(--ink);
+  }
+  .narration p.placeholder { color: var(--ink-muted); font-weight: 400; }
+
+  /* detail segmented */
+  .segmented {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 6px; padding: 6px;
+    background: var(--surface-2);
+    border-radius: var(--radius-md);
+    margin: 12px 16px 0;
+  }
+  .segmented button {
+    min-height: 46px;
+    border: none; border-radius: 9px;
+    background: transparent; color: var(--ink-muted);
+    font-family: var(--font-body); font-size: 13px; font-weight: 700; letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: background var(--ease) 150ms, color var(--ease) 150ms;
+  }
+  .segmented button:hover { color: var(--ink); }
+  .segmented button[aria-pressed="true"] {
+    background: var(--bg); color: var(--ink);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.16);
+  }
+  .segmented button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+  .mode-seg { grid-template-columns: repeat(2, 1fr); margin: 10px 16px 0; }
+  .mode-hint { display: flex; align-items: center; gap: 8px; margin: 8px 16px 0; font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-muted); }
+  .mode-hint svg { width: 14px; height: 14px; flex-shrink: 0; }
+  .detLayer { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+
+  /* describe CTA */
+  .describe-wrap { padding: 12px 16px 0; }
+  #describeBtn {
+    width: 100%;
+    min-height: 64px;
+    border: none; border-radius: var(--radius-md);
+    background: var(--accent); color: var(--accent-ink);
+    font-family: var(--font-body); font-size: 18px; font-weight: 800; letter-spacing: 0.01em;
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+    cursor: pointer;
+    transition: transform 60ms, box-shadow var(--ease) 150ms, background var(--ease) 150ms;
+    box-shadow: 0 6px 0 color-mix(in oklab, var(--accent), black 22%);
+  }
+  #describeBtn:hover { background: color-mix(in oklab, var(--accent), white 8%); }
+  #describeBtn:active { transform: translateY(3px); box-shadow: 0 2px 0 color-mix(in oklab, var(--accent), black 22%); }
+  #describeBtn:focus-visible { outline: none; box-shadow: var(--focus-ring), 0 6px 0 color-mix(in oklab, var(--accent), black 22%); }
+  #describeBtn:disabled { background: var(--surface-2); color: var(--ink-muted); box-shadow: none; cursor: not-allowed; }
+  #describeBtn svg { width: 24px; height: 24px; flex-shrink: 0; }
+  #describeBtn.listening { animation: listenPulse 1100ms ease-in-out infinite; }
+  #describeBtn.listening:disabled { background: var(--accent); color: var(--accent-ink); }
+  #describeBtn .btn-progress {
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 3px solid color-mix(in oklab, var(--accent-ink), transparent 72%);
+    border-top-color: var(--accent-ink);
+    animation: spin 700ms linear infinite;
+  }
+
+  /* quick actions */
+  .quick {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    padding: 14px 16px calc(env(safe-area-inset-bottom, 0px) + 18px);
+  }
+  .qa {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    min-height: 66px;
+    border: 1.5px solid var(--border-strong); border-radius: var(--radius-md);
+    background: var(--surface); color: var(--ink);
+    font-family: var(--font-body); font-size: 12px; font-weight: 600;
+    cursor: pointer;
+    transition: background var(--ease) 150ms, transform 60ms;
+  }
+  .qa:hover { background: var(--surface-2); }
+  .qa:active { transform: scale(0.97); }
+  .qa:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+  .qa:disabled { opacity: 0.42; cursor: not-allowed; }
+  .qa svg { width: 22px; height: 22px; }
+  .qa .qa-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .qa:disabled .qa-dot { background: var(--ink-muted); }
+
+  /* ===== overlay sheet (radar / read text) ===== */
+  .sheet {
+    position: absolute; inset: 0; z-index: 20;
+    display: flex; flex-direction: column;
+    background: var(--bg);
+    padding: calc(env(safe-area-inset-top, 0px) + 14px) 16px calc(env(safe-area-inset-bottom, 0px) + 18px);
+    transform: translateY(100%);
+    transition: transform 280ms var(--ease);
+    visibility: hidden;
+  }
+  .sheet.open { transform: translateY(0); visibility: visible; }
+  .sheet-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .sheet-head h2 { font-size: 20px; font-weight: 800; letter-spacing: -0.01em; flex: 1; }
+  .sheet-close {
+    width: 44px; height: 44px; display: grid; place-items: center;
+    border: none; border-radius: var(--radius-md); background: var(--surface-2);
+    color: var(--ink); cursor: pointer;
+  }
+  .sheet-close:hover { background: var(--surface); }
+  .sheet-close svg { width: 20px; height: 20px; }
+  .obj-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 0; border-bottom: 1px solid var(--border);
+  }
+  .obj-row:last-child { border-bottom: none; }
+  .obj-dir {
+    width: 42px; height: 42px; border-radius: 10px; flex-shrink: 0;
+    display: grid; place-items: center;
+    background: var(--surface-2); color: var(--ink);
+  }
+  .obj-dir svg { width: 20px; height: 20px; }
+  .obj-dir.near { background: var(--accent); color: #FFFFFF; }
+  .obj-info { flex: 1; min-width: 0; }
+  .obj-name { font-size: 16px; font-weight: 700; }
+  .obj-meta { font-size: 13px; color: var(--ink-muted); margin-top: 1px; }
+  .obj-dist { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--ink); }
+
+  .ocr-result {
+    margin-top: 6px;
+    border: 1.5px solid var(--border-strong); border-radius: var(--radius-md);
+    padding: 16px;
+    background: var(--surface);
+  }
+  .ocr-result .ocr-src {
+    font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--ink-muted); margin-bottom: 8px;
+  }
+  .ocr-result p { font-size: 16px; line-height: 1.55; font-weight: 500; }
+
+  .sheet-hint {
+    margin-top: auto; padding-top: 16px;
+    font-size: 13px; color: var(--ink-muted); line-height: 1.5;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ===== navigation (Google Maps) ===== */
+  .nav-map { position: relative; height: 200px; border-radius: var(--radius-md); background: #E8E4DC; overflow: hidden; margin-bottom: 12px; }
+  [data-theme="dark"] .nav-map { background: #1E1C19; }
+  .nav-map svg { width: 100%; height: 100%; display: block; }
+  .turn-card { background: var(--accent); color: var(--accent-ink); border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 10px; }
+  .turn-card .t-lbl { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.7; margin-bottom: 4px; }
+  .turn-card .t-main { font-size: 20px; font-weight: 800; line-height: 1.2; }
+  .turn-card .t-sub { font-size: 13px; font-weight: 600; opacity: 0.85; margin-top: 4px; }
+  .eta-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .eta { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 13px; }
+  .eta .e-lbl { font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-muted); margin-bottom: 4px; }
+  .eta .e-val { font-family: var(--font-mono); font-size: 18px; font-weight: 700; }
+  .nav-actions { display: flex; gap: 10px; }
+  .nav-actions .qa { flex: 1; }
+
+  /* toast */
+  .toast {
+    position: absolute; z-index: 30; left: 50%; bottom: 130px;
+    transform: translate(-50%, 16px);
+    background: var(--ink); color: var(--bg);
+    font-size: 13px; font-weight: 600;
+    padding: 10px 16px; border-radius: var(--radius-pill);
+    opacity: 0; pointer-events: none;
+    transition: opacity 200ms var(--ease), transform 200ms var(--ease);
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes blink { 50% { opacity: 0.25; } }
+  @keyframes listenPulse {
+    0%, 100% { box-shadow: 0 6px 0 color-mix(in oklab, var(--accent), black 22%), 0 0 0 0 rgba(255,77,0,0.5); }
+    50% { box-shadow: 0 6px 0 color-mix(in oklab, var(--accent), black 22%), 0 0 0 14px rgba(255,77,0,0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #describeBtn.listening { animation: none; }
+    .narration .n-eyebrow.pending .live-dot { animation: none; }
+    .btn-progress { animation: none; }
+    .sheet { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- status bar -->
+  <header class="statusbar">
+    <span class="sb-time" id="clock">9:41</span>
+    <div class="sb-modes">
+      <span class="mode-chip live" id="modeChip">Live · Detailed</span>
+    </div>
+    <div class="sb-right">
+      <span class="sb-stat" id="connStat" title="Connection">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12.5a10 10 0 0 1 14 0"/><path d="M8.5 15.5a5.5 5.5 0 0 1 7 0"/><circle cx="12" cy="19" r="1.4" fill="currentColor" stroke="none"/></svg>
+        <span class="dot"></span>
+      </span>
+      <button class="icon-btn" id="themeToggle" aria-label="Toggle light and dark theme" title="Toggle theme">
+        <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5.2 5.2l1.7 1.7M17.1 17.1l1.7 1.7M18.8 5.2l-1.7 1.7M6.9 17.1l-1.7 1.7"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- offline banner -->
+  <div class="banner" id="offlineBanner" role="status">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M9.5 10.5a10 10 0 0 1 10 6"/><path d="M6.8 6.8A10 10 0 0 0 5 16"/></svg>
+    <span class="b-msg">Offline — using on-device model, descriptions continue.</span>
+    <span class="b-tag">Offline</span>
+  </div>
+
+  <!-- indoor / outdoor mode -->
+  <div class="segmented mode-seg" role="group" aria-label="Environment mode">
+    <button data-mode="indoor" aria-pressed="false">Indoor</button>
+    <button data-mode="outdoor" aria-pressed="true">Outdoor</button>
+  </div>
+  <div class="mode-hint" id="modeHint">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><path d="M12 3.5v3M12 17.5v3M3.5 12h3M17.5 12h3"/></svg>
+    <span id="modeHintText">Outdoor · Google Maps routing on</span>
+  </div>
+
+  <!-- camera viewport -->
+  <main class="camera" aria-label="Live camera view">
+    <div class="vig"></div>
+
+    <!-- detection boxes (rendered per mode) -->
+    <div class="detLayer" id="detLayer"></div>
+
+    <!-- spatial audio direction markers -->
+    <div class="spatial" aria-hidden="true">
+      <span class="sp-dir" id="spLeft">
+        <span class="sp-arc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span>Left
+      </span>
+      <span class="sp-dir" id="spAhead">
+        <span class="sp-arc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span>Ahead
+      </span>
+      <span class="sp-dir" id="spRight">
+        <span class="sp-arc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>Right
+      </span>
+    </div>
+
+    <!-- narration -->
+    <div class="narration" id="narration">
+      <div class="n-eyebrow" id="nEyebrow"><span class="live-dot"></span> Live description</div>
+      <p class="placeholder" id="narrationText">Tap “Describe” to hear what's around you.</p>
+    </div>
+
+    <div class="toast" id="toast" role="status"></div>
+  </main>
+
+  <!-- detail level -->
+  <div class="segmented" id="detailSeg" role="group" aria-label="Narration detail level">
+    <button data-level="brief" aria-pressed="false">Brief</button>
+    <button data-level="standard" aria-pressed="false">Standard</button>
+    <button data-level="detailed" aria-pressed="true">Detailed</button>
+  </div>
+
+  <!-- describe CTA -->
+  <div class="describe-wrap">
+    <button id="describeBtn">
+      <svg id="describeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.5a2 2 0 0 1 2-2h3l2-2.5h6l2 2.5h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.2"/></svg>
+      <span id="describeLabel">Describe my surroundings</span>
+    </button>
+  </div>
+
+  <!-- quick actions -->
+  <nav class="quick" aria-label="Quick actions">
+    <button class="qa" id="qaRead">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h11v16H4z"/><path d="M15 6h3l2 2v10h-5z"/><path d="M7.5 10h4M7.5 14h4"/></svg>
+      Read text
+    </button>
+    <button class="qa" id="qaRadar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.2"/><path d="M12 3.5v3M12 17.5v3M3.5 12h3M17.5 12h3"/></svg>
+      <span>Radar</span><span class="qa-dot"></span>
+    </button>
+    <button class="qa" id="qaNav">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 7-8"/><circle cx="20" cy="7" r="2.2"/></svg>
+      <span id="qaNavLabel">Navigate</span>
+    </button>
+  </nav>
+
+  <!-- radar sheet -->
+  <div class="sheet" id="radarSheet" role="dialog" aria-modal="true" aria-label="Object and obstacle radar">
+    <div class="sheet-head">
+      <h2>Object radar</h2>
+      <button class="sheet-close" data-close="radarSheet" aria-label="Close radar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="obj-row">
+      <span class="obj-dir near"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span>
+      <div class="obj-info"><div class="obj-name">Curb edge</div><div class="obj-meta">Directly ahead · step down</div></div>
+      <span class="obj-dist">1 m</span>
+    </div>
+    <div class="obj-row">
+      <span class="obj-dir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span>
+      <div class="obj-info"><div class="obj-name">Bench</div><div class="obj-meta">To your left · open space beside it</div></div>
+      <span class="obj-dist">2 m</span>
+    </div>
+    <div class="obj-row">
+      <span class="obj-dir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>
+      <div class="obj-info"><div class="obj-name">Person</div><div class="obj-meta">To your right · moving away</div></div>
+      <span class="obj-dist">3 m</span>
+    </div>
+    <div class="obj-row">
+      <span class="obj-dir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span>
+      <div class="obj-info"><div class="obj-name">Crosswalk</div><div class="obj-meta">Straight ahead · audible signal pole</div></div>
+      <span class="obj-dist">6 m</span>
+    </div>
+    <p class="sheet-hint">Spatial audio cues play through your headset: a rising tone as an obstacle gets closer, direction panning left / right.</p>
+  </div>
+
+  <!-- read text sheet -->
+  <div class="sheet" id="readSheet" role="dialog" aria-modal="true" aria-label="Text reader">
+    <div class="sheet-head">
+      <h2>Text reader</h2>
+      <button class="sheet-close" data-close="readSheet" aria-label="Close text reader">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="ocr-result">
+      <div class="ocr-src">Sign ahead · read aloud</div>
+      <p>“Platform 2 — Southbound trains. Next departure: 12 minutes.”</p>
+    </div>
+    <div class="ocr-result">
+      <div class="ocr-src">Menu · cafe counter</div>
+      <p>“Filter coffee $3.50 · Oat flat white $4.20 · Croissant $3.80”</p>
+    </div>
+    <p class="sheet-hint">Point the camera at any sign, menu, or document and ClearSight reads it aloud with position guidance.</p>
+  </div>
+
+  <!-- navigation sheet -->
+  <div class="sheet" id="navSheet" role="dialog" aria-modal="true" aria-label="Google Maps live guidance">
+    <div class="sheet-head">
+      <h2>Google Maps · live</h2>
+      <button class="sheet-close" data-close="navSheet" aria-label="Close navigation">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="nav-map" aria-hidden="true">
+      <svg viewBox="0 0 320 200" preserveAspectRatio="none">
+        <path d="M0 140 H320 M90 0 V200 M220 0 V200 M0 60 H320" stroke="#D5CEC2" stroke-width="7" fill="none"/>
+        <path d="M50 140 L90 140 L90 60 L260 60 L260 28" stroke="#FF4D00" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="50" cy="140" r="9" fill="#111111" stroke="#FFFFFF" stroke-width="3"/>
+        <circle cx="260" cy="28" r="8" fill="#FF4D00" stroke="#FFFFFF" stroke-width="3"/>
+      </svg>
+    </div>
+    <div class="turn-card">
+      <div class="t-lbl">Next turn · 200 m</div>
+      <div class="t-main">Turn right onto Main St</div>
+      <div class="t-sub">Live traffic · auto-reroute on</div>
+    </div>
+    <div class="eta-row">
+      <div class="eta"><div class="e-lbl">Arrive</div><div class="e-val">10:03</div></div>
+      <div class="eta"><div class="e-lbl">Time</div><div class="e-val">6 min</div></div>
+      <div class="eta"><div class="e-lbl">Distance</div><div class="e-val">1.4 km</div></div>
+    </div>
+    <div class="nav-actions">
+      <button class="qa" id="muteVoice" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 9a4 4 0 0 1 0 6"/></svg>
+        Mute voice
+      </button>
+      <button class="qa" data-close="navSheet">End guidance</button>
+    </div>
+    <p class="sheet-hint">Google Maps Directions API + Navigation SDK drive turn-by-turn voice and traffic-aware rerouting; ClearSight layers obstacle narration on top.</p>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  const NARRATION = {
+    indoor: {
+      brief: "Living room. A sofa ahead, coffee table in front.",
+      standard: "You're in a living room. A sofa is two meters ahead. A coffee table is directly in front of you, about half a meter. A doorway is to your right.",
+      detailed: "You're in a living room. A sofa is two meters ahead, against the far wall. Directly in front of you, about half a meter, is a low coffee table — step around it to the left. A doorway into the kitchen is to your right. A floor lamp is in the far left corner."
+    },
+    outdoor: {
+      brief: "Sidewalk ahead. A bench on your left, two meters.",
+      standard: "You're on a sidewalk. A bench is two meters to your left. A crosswalk is straight ahead, about six meters. One person is passing on your right.",
+      detailed: "You're standing on a concrete sidewalk. Two meters to your left there's a park bench with open space beside it. Straight ahead, about six meters, is a crosswalk with an audible signal pole. One person is passing you on your right and moving away. The curb edge is about one meter directly in front of you — step carefully."
+    }
+  };
+
+  const DETECTIONS = {
+    indoor: [
+      { l: '18%', t: '26%', w: '30%', h: '46%', tag: 'SOFA', dist: 'ahead · 2 m' },
+      { l: '32%', t: '70%', w: '34%', h: '9%', tag: 'COFFEE TABLE', dist: 'front · 0.5 m' },
+      { l: '74%', t: '40%', w: '18%', h: '42%', tag: 'DOORWAY', dist: 'right · 1 m' }
+    ],
+    outdoor: [
+      { l: '14%', t: '24%', w: '26%', h: '34%', tag: 'BENCH', dist: 'left · 2 m' },
+      { l: '62%', t: '40%', w: '24%', h: '46%', tag: 'PERSON', dist: 'right · 3 m' },
+      { l: '34%', t: '64%', w: '34%', h: '12%', tag: 'CURB EDGE', dist: 'front · 1 m' }
+    ]
+  };
+
+  var level = 'detailed';
+  var mode = 'outdoor';
+  var described = false;
+  var busy = false;
+
+  var describeBtn = document.getElementById('describeBtn');
+  var describeLabel = document.getElementById('describeLabel');
+  var describeIcon = document.getElementById('describeIcon');
+  var narrationText = document.getElementById('narrationText');
+  var narration = document.getElementById('narration');
+  var nEyebrow = document.getElementById('nEyebrow');
+  var modeChip = document.getElementById('modeChip');
+  var toast = document.getElementById('toast');
+
+  var ICON_IDLE = '<svg id="describeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.5a2 2 0 0 1 2-2h3l2-2.5h6l2 2.5h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.2"/></svg>';
+
+  function setBusy(state) {
+    busy = state;
+    describeBtn.disabled = state;
+    if (state) {
+      var ic = document.getElementById('describeIcon'); if (ic) ic.remove();
+      describeBtn.classList.add('listening');
+      describeBtn.insertAdjacentHTML('afterbegin', '<span class="btn-progress" id="btnProgress"></span>');
+    } else {
+      describeBtn.classList.remove('listening');
+      var p = document.getElementById('btnProgress'); if (p) p.remove();
+      describeBtn.innerHTML = ICON_IDLE + '<span id="describeLabel">' + (described ? 'Describe again' : 'Describe my surroundings') + '</span>';
+      describeLabel = document.getElementById('describeLabel');
+    }
+  }
+
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function () { toast.classList.remove('show'); }, 2400);
+  }
+
+  function describeFlow() {
+    if (busy) return;
+    nEyebrow.classList.add('pending');
+    nEyebrow.lastChild.textContent = ' Listening…';
+    narrationText.textContent = '';
+    narrationText.classList.remove('placeholder');
+    setBusy(true);
+    describeLabel.textContent = 'Listening…';
+
+    setTimeout(function () {
+      describeLabel.textContent = 'Describing…';
+      nEyebrow.lastChild.textContent = ' Describing…';
+      setTimeout(function () {
+        nEyebrow.classList.remove('pending');
+        nEyebrow.lastChild.textContent = ' Live description';
+        narrationText.textContent = NARRATION[mode][level];
+        described = true;
+        setBusy(false);
+        pulseDirection();
+      }, 1500);
+    }, 1100);
+  }
+  describeBtn.addEventListener('click', describeFlow);
+
+  function pulseDirection() {
+    [document.getElementById('spLeft'), document.getElementById('spAhead'), document.getElementById('spRight')].forEach(function (el) {
+      el.classList.add('pulse');
+      setTimeout(function () { el.classList.remove('pulse'); }, 1600);
+    });
+  }
+
+  /* detail segmented */
+  document.querySelectorAll('#detailSeg button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('#detailSeg button').forEach(function (b) { b.setAttribute('aria-pressed', 'false'); });
+      btn.setAttribute('aria-pressed', 'true');
+      level = btn.dataset.level;
+      refreshChip();
+      if (described) { narrationText.textContent = NARRATION[mode][level]; }
+    });
+  });
+
+  /* indoor / outdoor mode */
+  var detLayer = document.getElementById('detLayer');
+  var qaNav = document.getElementById('qaNav');
+  var qaNavLabel = document.getElementById('qaNavLabel');
+  var modeHintText = document.getElementById('modeHintText');
+  function refreshChip() {
+    modeChip.textContent = (mode === 'indoor' ? 'Indoor · ' : 'Outdoor · ') + (level.charAt(0).toUpperCase() + level.slice(1));
+  }
+  function renderDetections() {
+    var html = '';
+    DETECTIONS[mode].forEach(function (d) {
+      html += '<div class="det" style="left:' + d.l + '; top:' + d.t + '; width:' + d.w + '; height:' + d.h + ';"><span class="det-tag">' + d.tag + '</span><span class="det-dist">' + d.dist + '</span></div>';
+    });
+    detLayer.innerHTML = html;
+  }
+  function applyMode(m) {
+    mode = m;
+    document.querySelectorAll('.mode-seg button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.mode === m)); });
+    modeHintText.textContent = m === 'outdoor' ? 'Outdoor · Google Maps routing on' : 'Indoor · household items · no maps';
+    qaNav.disabled = (m === 'indoor');
+    qaNavLabel.textContent = m === 'indoor' ? 'Outdoor only' : 'Navigate';
+    renderDetections();
+    refreshChip();
+    if (described) { narrationText.textContent = NARRATION[mode][level]; }
+  }
+  document.querySelectorAll('.mode-seg button').forEach(function (btn) {
+    btn.addEventListener('click', function () { applyMode(btn.dataset.mode); });
+  });
+  refreshChip();
+  renderDetections();
+
+  /* theme toggle */
+  var themeToggle = document.getElementById('themeToggle');
+  themeToggle.addEventListener('click', function () {
+    var html = document.documentElement;
+    html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  });
+
+  /* connection toggle → offline state */
+  var connStat = document.getElementById('connStat');
+  var offlineBanner = document.getElementById('offlineBanner');
+  connStat.style.cursor = 'pointer';
+  connStat.addEventListener('click', function () {
+    var off = connStat.classList.toggle('off');
+    offlineBanner.classList.toggle('show', off);
+  });
+
+  /* quick actions */
+  var radarSheet = document.getElementById('radarSheet');
+  var readSheet = document.getElementById('readSheet');
+  var navSheet = document.getElementById('navSheet');
+  document.getElementById('qaRadar').addEventListener('click', function () { radarSheet.classList.add('open'); });
+  document.getElementById('qaRead').addEventListener('click', function () { readSheet.classList.add('open'); });
+  document.getElementById('qaNav').addEventListener('click', function () { navSheet.classList.add('open'); });
+  document.getElementById('muteVoice').addEventListener('click', function () {
+    var b = document.getElementById('muteVoice');
+    var on = b.getAttribute('aria-pressed') === 'true';
+    b.setAttribute('aria-pressed', String(!on));
+    b.style.opacity = on ? '1' : '0.55';
+  });
+  document.querySelectorAll('[data-close]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.getElementById(btn.dataset.close).classList.remove('open');
+    });
+  });
+
+  /* live clock */
+  function tick() {
+    var d = new Date();
+    var h = d.getHours(), m = d.getMinutes();
+    document.getElementById('clock').textContent = (h % 12 || 12) + ':' + (m < 10 ? '0' : '') + m;
+  }
+  tick(); setInterval(tick, 30000);
+})();
+</script>
+</body>
+</html>
