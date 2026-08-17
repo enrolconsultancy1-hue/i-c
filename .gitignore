@@ -30,3 +30,6 @@ Thumbs.db
 .idea/
 .vscode/
 *.log
+
+# Python test cache
+.pytest_cache/

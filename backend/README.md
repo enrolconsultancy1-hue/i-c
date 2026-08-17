@@ -33,6 +33,16 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 Open http://localhost:8000/docs to try the API.
 
+## Test
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+The suite covers the radar JSON parser, prompt templates, and the REST routers
+(Gemini mocked — no API key required).
+
 ## Configuration (`.env`)
 
 | Variable | Required | Description |

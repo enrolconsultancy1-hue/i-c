@@ -43,7 +43,9 @@ spoken guidance.
    are skipped while Gemini is busy) and **suppresses duplicate narration**.
 3. Narration arrives as `{"type":"narration","text":...}`; the app gates TTS (≥3.5 s between
    utterances, no repeats) and speaks via `speech.ts`.
-4. This transport is the same one the wearable glasses will use in Phase 1.
+4. The client auto-reconnects with exponential backoff (capped at 15 s) if the socket drops,
+   so a transient network blip doesn't end the session.
+5. This transport is the same one the wearable glasses will use in Phase 1.
 
 ## Data flow (voice command)
 
@@ -60,9 +62,15 @@ spoken guidance.
   in production. `API.baseUrl` (empty = demo/mock mode) points the app at the backend.
 - **REST for single-shot, WebSocket for continuous.** On-demand actions (Describe / OCR / Radar /
   Transcribe / Directions) use simple HTTP. Continuous real-time narration streams frames over a
-  WebSocket with coalescing + dedup — the exact pattern needed for the wearable (Phase 1).
+  WebSocket with coalescing + dedup + auto-reconnect — the exact pattern needed for the wearable.
 - **Python backend.** The perception pipeline (today Gemini, tomorrow on-device YOLO/depth)
   belongs in Python so it can move cloud → edge with minimal rewrites.
+
+## Testing
+
+- Backend: `pytest` (`backend/tests/`) — radar JSON parser, prompt templates, REST routers
+  (Gemini mocked). Run with `pip install -r requirements-dev.txt && pytest`.
+- Frontend: `tsc --noEmit` typecheck.
 
 ## Security & privacy
 
