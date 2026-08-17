@@ -15,7 +15,7 @@ i-C/
 ├── app/            Expo (React Native + TypeScript) mobile app — the product UI
 ├── backend/        FastAPI (Python) service — proxies Gemini Vision + Google Maps
 ├── design/         UI design deliverables (interactive prototype + infinite canvas)
-├── docs/           ARCHITECTURE.md · API.md · WEARABLE_ROADMAP.md
+├── docs/           ARCHITECTURE.md · API.md · WEARABLE_ROADMAP.md · OFFLINE_MODE.md
 ├── README.md       this file
 └── PRODUCTION.md   production-readiness checklist
 ```
@@ -34,7 +34,7 @@ i-C/
 3. **Obstacle & object detection** — proximity + direction cues.
 4. **Navigation** — Google Maps real-time guided routing (see below).
 5. **Detail control** — Brief / Standard / Detailed verbosity + speech rate.
-6. **Offline mode** — on-device models, cached descriptions.
+6. **Offline mode** — on-device models, cached descriptions (see [`docs/OFFLINE_MODE.md`](docs/OFFLINE_MODE.md)).
 7. **Language & speech** — multilingual + text-to-speech.
 8. **Settings & accessibility** — high-contrast UI, text scaling, privacy.
 
@@ -77,8 +77,8 @@ Then set `API.baseUrl` in `app/src/config.ts` to your machine's LAN IP (e.g.
 
 ## Tech stack
 
-- **Frontend**: Expo (React Native + TypeScript), `expo-camera`, `expo-speech`, `expo-location`.
-- **Backend**: FastAPI (Python) + httpx — Gemini Vision + Google Directions proxy.
+- **Frontend**: Expo (React Native + TypeScript), `expo-camera`, `expo-speech`, `expo-location`, `expo-audio`.
+- **Backend**: FastAPI (Python) + httpx — Gemini Vision/Audio + Google Directions proxy.
 - **Vision**: Gemini Vision (cloud now), YOLO + on-device models (roadmap).
 - **Navigation**: Google Maps Directions API + Navigation SDK.
 
@@ -97,6 +97,7 @@ The long-term goal is a wearable glasses form factor. See
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — system design, data flow, security & privacy.
 - [`docs/API.md`](docs/API.md) — backend API reference.
 - [`docs/WEARABLE_ROADMAP.md`](docs/WEARABLE_ROADMAP.md) — smart-glasses future plan.
+- [`docs/OFFLINE_MODE.md`](docs/OFFLINE_MODE.md) — step-by-step offline functionality guide.
 - [`PRODUCTION.md`](PRODUCTION.md) — shipping checklist.
 
 ## How to view the design

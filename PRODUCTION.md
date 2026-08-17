@@ -27,8 +27,11 @@ live GPS navigation, continuous narration (WebSocket), and voice commands. A Fas
   `audio/mp4`; if transcription fails, switch the recording preset to a Gemini-friendly format
   (e.g. WAV) in `app/src/components/VoiceButton.tsx` + `app/src/services/voice.ts`.
 
-## 5. Offline fallback (optional)
-- ML Kit text/object detection for offline OCR/radar when there is no network.
+## 5. Offline fallback
+- Planned, not yet coded — see [`docs/OFFLINE_MODE.md`](docs/OFFLINE_MODE.md) for the step-by-step
+  guide (Level 1 caching → on-device OCR/object detection → offline navigation).
+- The `offline` flag is already wired through the UI (`StatusStrip`); Level 1 caching is the
+  first code step and works in Expo Go.
 
 ## 6. Backend deployment
 - Deploy `backend/` (Cloud Run / a small VM) and set `API.baseUrl` to its HTTPS URL.
