@@ -3,8 +3,10 @@ import { View, Text, StyleSheet, TouchableOpacity, DimensionValue } from 'react-
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useApp } from '../context/AppContext';
 import { Mode } from '../types';
+import { CAMERA } from '../config';
 import { colors } from '../theme';
 import { connectStream } from '../services/stream';
+import { fetchFrameBase64 } from '../services/frame';
 import { hasApi } from '../services/api';
 import ModeToggle from '../components/ModeToggle';
 import NarrationCard from '../components/NarrationCard';
@@ -37,6 +39,8 @@ export default function LiveViewScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
 
+  const external = CAMERA.captureUrl.trim().length > 0;
+
   const modeRef = useRef(mode);
   modeRef.current = mode;
   const detailRef = useRef(detail);
@@ -47,14 +51,24 @@ export default function LiveViewScreen() {
   const lastTextRef = useRef('');
   const lastAtRef = useRef(0);
 
-  const handleDescribe = async () => {
-    let image: string | undefined;
+  const captureFrame = async (): Promise<string | undefined> => {
+    if (external) {
+      try {
+        return await fetchFrameBase64(CAMERA.captureUrl);
+      } catch {
+        return undefined;
+      }
+    }
     try {
       const shot = await cameraRef.current?.takePictureAsync({ base64: true, quality: 0.4 });
-      image = shot?.base64 ?? undefined;
+      return shot?.base64 ?? undefined;
     } catch {
-      // if capture fails, describe without an image (falls back to mock)
+      return undefined;
     }
+  };
+
+  const handleDescribe = async () => {
+    const image = await captureFrame();
     await describe(image);
   };
 
@@ -81,13 +95,8 @@ export default function LiveViewScreen() {
     );
 
     const timer = setInterval(async () => {
-      try {
-        const shot = await cameraRef.current?.takePictureAsync({ base64: true, quality: 0.35 });
-        const frame = shot?.base64;
-        if (frame) client.sendFrame(frame, modeRef.current, detailRef.current);
-      } catch {
-        // capture can fail mid-stream; skip this tick
-      }
+      const frame = await captureFrame();
+      if (frame) client.sendFrame(frame, modeRef.current, detailRef.current);
     }, STREAM_INTERVAL_MS);
 
     return () => {
@@ -100,7 +109,12 @@ export default function LiveViewScreen() {
     <View style={styles.root}>
       <ModeToggle />
       <View style={[styles.viewport, { backgroundColor: theme === 'dark' ? '#241F1A' : '#4C443A' }]}>
-        {permission?.granted ? (
+        {external ? (
+          <View style={styles.placeholder}>
+            <Text style={styles.phText}>External camera connected.</Text>
+            <Text style={styles.phSub}>Frames stream from your camera module.</Text>
+          </View>
+        ) : permission?.granted ? (
           <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="back" />
         ) : (
           <View style={styles.placeholder}>
@@ -139,8 +153,9 @@ export default function LiveViewScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   viewport: { flex: 1, margin: 16, marginTop: 12, marginBottom: 0, borderRadius: 16, overflow: 'hidden' },
-  placeholder: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16 },
+  placeholder: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 12 },
   phText: { color: '#FFFFFF', fontSize: 15, fontWeight: '600', textAlign: 'center', lineHeight: 22 },
+  phSub: { color: '#D8D2C8', fontSize: 13, fontWeight: '500', textAlign: 'center', lineHeight: 19 },
   permBtn: { borderRadius: 12, paddingHorizontal: 24, paddingVertical: 14 },
   permText: { fontSize: 16, fontWeight: '800' },
   det: { position: 'absolute', borderWidth: 2, borderRadius: 4 },

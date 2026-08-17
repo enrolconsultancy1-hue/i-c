@@ -30,6 +30,18 @@ npx expo start
 
 Leave `API.baseUrl` empty to run in demo/mock mode.
 
+### External camera (Phase 1 glasses prep)
+
+To use an external WiFi camera (e.g. an **ESP32-CAM**) instead of the phone camera:
+
+1. Flash the stock ESP32-CAM example and note its **single-JPEG snapshot** URL
+   (typically `http://<camera-ip>/capture`; the MJPEG stream is a separate `/stream` route).
+2. In `src/config.ts` set `CAMERA.captureUrl` to that snapshot URL.
+3. The app fetches one JPEG per capture from that URL — no native camera plugin needed.
+
+When `CAMERA.captureUrl` is set, the phone camera is not used and no camera permission
+is requested. Pair a Bluetooth bone-conduction headset to the phone for audio.
+
 ### Google Maps (standalone builds)
 
 ```bash
@@ -48,11 +60,14 @@ app/
 └── src/
     ├── theme.ts                 # design tokens (colors, font)
     ├── types.ts                 # shared types
-    ├── config.ts                # API.baseUrl + dev-only fallback keys
+    ├── config.ts                # API.baseUrl, CAMERA.captureUrl, dev-only keys
     ├── context/AppContext.tsx   # global state (theme, detail, offline, narration)
     ├── services/
     │   ├── api.ts               # tiny HTTP client for the backend
+    │   ├── frame.ts             # fetch external-camera frames (Phase 1)
     │   ├── vision.ts            # scene description / OCR / radar (backend → dev → mock)
+    │   ├── stream.ts            # WebSocket live narration (auto-reconnect)
+    │   ├── voice.ts             # speech-to-text + command parsing
     │   ├── speech.ts            # text-to-speech (expo-speech)
     │   └── maps.ts              # routing (backend → Directions API → demo)
     ├── components/              # StatusStrip, NarrationCard, DescribeButton, etc.
@@ -63,6 +78,8 @@ app/
 
 - **Vision** — `src/services/vision.ts`: already wired to the backend proxy; swap the backend's
   Gemini call for YOLO (on-device) later.
+- **Frame source** — `src/services/frame.ts` + `CAMERA.captureUrl` in `src/config.ts`: the
+  external-camera path for Phase 1 glasses.
 - **Speech** — `src/services/speech.ts`: pick voice per language via
   `Speech.getAvailableVoicesAsync()`.
 - **Google Maps** — `src/services/maps.ts`: routed through the backend; add the Navigation SDK
@@ -83,4 +100,5 @@ The toggle lives in `src/components/ModeToggle.tsx`; the mode-aware vocabulary l
 ## Current scope
 
 The app runs with mock vision/routing data when no backend/key is configured. Camera uses
-`expo-camera` with a permission request; TTS uses `expo-speech`.
+`expo-camera` (or an external camera URL) with a permission request; TTS uses `expo-speech`;
+voice commands use `expo-audio` + the backend's speech endpoint.

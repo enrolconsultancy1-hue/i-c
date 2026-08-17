@@ -13,6 +13,13 @@ export const API = {
   baseUrl: '',
 };
 
+export const CAMERA = {
+  // Optional external camera (Phase 1 glasses prep). Point this at a single-JPEG
+  // snapshot endpoint, e.g. an ESP32-CAM: 'http://192.168.4.1/capture'. When set,
+  // the app captures frames from this URL instead of the on-device camera.
+  captureUrl: '',
+};
+
 export const VISION = {
   provider: 'gemini' as const,
   // Dev-only fallback used only when API.baseUrl is empty. Prefer the backend.

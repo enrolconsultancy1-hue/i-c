@@ -21,16 +21,29 @@ spoken guidance.
 
 ## Layers
 
-1. **Capture** (`expo-camera` + `expo-audio`) — frames + audio + GPS + orientation.
+1. **Capture** (`expo-camera` **or** an external camera URL) + `expo-audio` — frames + audio +
+   GPS + orientation.
 2. **Perception** (Gemini via backend) — scene description, OCR, object/obstacle detection,
    and speech transcription (voice commands).
 3. **Reasoning / safety** — the prompts embed a safety frame: positions, distances, hazards.
 4. **Presentation** — text-to-speech (`expo-speech`) + spatial-audio direction cues + high-contrast UI.
 5. **Navigation** — Google Directions (via backend) + optional Navigation SDK for turn-by-turn.
 
+## Frame source
+
+The app has two interchangeable frame sources:
+
+- **On-device** (default): `expo-camera` captures a frame with `takePictureAsync({ base64: true })`.
+- **External** (Phase 1 glasses): set `CAMERA.captureUrl` in `config.ts` to a single-JPEG
+  snapshot endpoint (e.g. an ESP32-CAM `/capture` route). `services/frame.ts` fetches one JPEG
+  per capture and base64-encodes it — no native camera plugin needed.
+
+Everything downstream (describe / OCR / radar / streaming) consumes a base64 frame and is
+agnostic to the source.
+
 ## Data flow (single-shot describe)
 
-1. User taps Describe → `LiveViewScreen` captures a frame.
+1. User taps Describe → `LiveViewScreen` captures a frame (on-device or external).
 2. `services/vision.ts` POSTs base64 frame + `{mode, detail}` to `/api/v1/vision/describe`.
 3. Backend calls Gemini with the safety-focused prompt, returns plain narration text.
 4. App speaks it via `services/speech.ts` and shows it in `NarrationCard`.
@@ -63,6 +76,8 @@ spoken guidance.
 - **REST for single-shot, WebSocket for continuous.** On-demand actions (Describe / OCR / Radar /
   Transcribe / Directions) use simple HTTP. Continuous real-time narration streams frames over a
   WebSocket with coalescing + dedup + auto-reconnect — the exact pattern needed for the wearable.
+- **Frame source is swappable.** The app supports both the phone camera and an external camera
+  URL, so Phase 1 hardware (a stock WiFi camera on glasses) needs only a config string.
 - **Python backend.** The perception pipeline (today Gemini, tomorrow on-device YOLO/depth)
   belongs in Python so it can move cloud → edge with minimal rewrites.
 

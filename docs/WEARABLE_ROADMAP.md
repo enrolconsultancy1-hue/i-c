@@ -36,16 +36,18 @@ sign reads EXIT" — with a single touch or voice command to change detail level
   coalescing + duplicate suppression; the app streams frames live ("Continuous narration").
 - ✅ **Voice commands** — hands-free control via `expo-audio` recording + `/api/v1/speech/transcribe`
   (describe / read / radar / navigate / stop / home).
+- ✅ **External camera source** — the app accepts a `CAMERA.captureUrl` (single-JPEG snapshot
+  endpoint), so a stock WiFi camera on glasses needs only a config string, no native plugin.
 - Next: validate the perception prompts and the "safety-first" narration style with real users.
 
 ### Phase 1 — Tethered glasses (prototype)
-- Off-the-shelf smart-glasses dev kit (or a custom 3D-printed frame with a small camera module +
-  bone-conduction transducer).
-- Glasses stream frames + IMU data over **BLE/WiFi** to the phone (or a pocket edge unit); the
-  phone/unit runs perception and streams audio back. Budget ~150–300 ms round-trip.
+- Off-the-shelf smart-glasses dev kit **or** a DIY rig (ESP32-CAM + bone-conduction transducer on
+  a glasses frame, ~$100–250 in parts).
+- Glasses stream frames + IMU data over **BLE/WiFi** to the phone; the phone runs perception and
+  streams audio back. Budget ~150–300 ms round-trip.
 - Reuse the existing `app/` as the companion: configuration, navigation, model updates, battery.
-- The WebSocket streaming channel + voice-command pipeline built in Phase 0 are the exact
-  transport + interaction the glasses will use.
+- The streaming channel, voice pipeline, and external-camera source built in Phase 0 are exactly
+  what the glasses will use — point `CAMERA.captureUrl` at the glasses camera and pair the audio.
 
 ### Phase 2 — Self-contained edge device
 - Move perception on-device: **YOLO** object/obstacle detection, monocular **depth estimation**,
@@ -65,7 +67,7 @@ sign reads EXIT" — with a single touch or voice command to change detail level
 
 | Subsystem | Now | Glasses |
 |-----------|-----|---------|
-| Capture | phone camera + mic | RGB + ToF/depth + IMU + mic |
+| Capture | phone camera **or** external URL | RGB + ToF/depth + IMU + mic |
 | Perception | Gemini (cloud, vision + speech) | YOLO + depth + OCR + on-device STT on NPU |
 | Safety layer | prompt rules | deterministic hazard heuristics (proximity, motion) |
 | Audio out | phone TTS | bone-conduction + spatial HRTF |
@@ -84,6 +86,7 @@ sign reads EXIT" — with a single touch or voice command to change detail level
 ## Recommended next concrete steps
 
 1. User-test the phone MVP (continuous narration + voice commands) to lock the narration vocabulary.
-2. Pick a glasses dev kit and build the Phase 1 BLE/WiFi streaming bridge.
-3. Port radar to on-device YOLO + depth; benchmark latency on a dev-kit NPU.
-4. Prototype head-tracked spatial audio.
+2. Buy/flash an ESP32-CAM and set `CAMERA.captureUrl` — validate the external-camera path end-to-end.
+3. Pick a glasses frame + bone-conduction transducer and assemble the Phase 1 tethered rig.
+4. Port radar to on-device YOLO + depth; benchmark latency on a dev-kit NPU.
+5. Prototype head-tracked spatial audio.
