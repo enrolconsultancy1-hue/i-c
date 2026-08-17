@@ -2,7 +2,8 @@
 
 Base URL: `http://<host>:8000` · Interactive docs at `/docs`.
 
-All vision endpoints accept `image_base64` — a JPEG or PNG frame, base64-encoded, **no** data-URI prefix.
+Vision endpoints accept `image_base64` (JPEG/PNG, base64, **no** data-URI prefix);
+the speech endpoint accepts `audio_base64` (same convention).
 
 ## GET /health
 → `200` `{"status":"ok","service":"eye-see-backend"}`
@@ -59,6 +60,25 @@ Response:
 ```
 
 `direction` ∈ `left | right | ahead | behind`. Up to 6 objects, most important first.
+
+## POST /api/v1/speech/transcribe
+
+Request:
+
+```json
+{ "audio_base64": "...", "mime_type": "audio/mp4" }
+```
+
+- `mime_type` defaults to `audio/mp4` (AAC in MP4, matching the app's `.m4a` recordings);
+  set `audio/wav`, `audio/webm`, etc. as needed.
+
+Response:
+
+```json
+{ "text": "describe what's around me" }
+```
+
+Transcribes the speech via Gemini; replies `no speech` when silent/unintelligible.
 
 ## WS /api/v1/vision/stream
 

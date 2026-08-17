@@ -1,4 +1,4 @@
-"""Prompt templates for the vision pipeline (single source of truth).
+"""Prompt templates for the vision + speech pipelines (single source of truth).
 
 Kept identical to the client-side prompts so direct-dev and proxied modes
 produce the same narration style.
@@ -36,4 +36,10 @@ RADAR_PROMPT = (
     '{"objects":[{"name":"chair","direction":"left","distanceM":2,"note":"low, trip hazard"}]}. '
     '"direction" must be one of: left, right, ahead, behind. "distanceM" is a rough estimate in '
     "meters. List up to 6 items, most important first."
+)
+
+TRANSCRIBE_PROMPT = (
+    "Transcribe the spoken words in this audio exactly as said. Return only the transcript, "
+    "lowercase, with no punctuation, quotes, or commentary. If the audio is silent or "
+    "unintelligible, reply exactly: no speech."
 )

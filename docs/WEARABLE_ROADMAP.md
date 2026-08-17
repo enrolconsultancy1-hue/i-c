@@ -34,6 +34,8 @@ sign reads EXIT" — with a single touch or voice command to change detail level
 - ✅ Camera + Gemini narration, OCR, obstacle radar, GPS nav, TTS.
 - ✅ **Continuous streaming bridge** — WebSocket `/api/v1/vision/stream` with latest-frame-wins
   coalescing + duplicate suppression; the app streams frames live ("Continuous narration").
+- ✅ **Voice commands** — hands-free control via `expo-audio` recording + `/api/v1/speech/transcribe`
+  (describe / read / radar / navigate / stop / home).
 - Next: validate the perception prompts and the "safety-first" narration style with real users.
 
 ### Phase 1 — Tethered glasses (prototype)
@@ -42,11 +44,12 @@ sign reads EXIT" — with a single touch or voice command to change detail level
 - Glasses stream frames + IMU data over **BLE/WiFi** to the phone (or a pocket edge unit); the
   phone/unit runs perception and streams audio back. Budget ~150–300 ms round-trip.
 - Reuse the existing `app/` as the companion: configuration, navigation, model updates, battery.
-- The WebSocket streaming channel built in Phase 0 is the transport the glasses will use.
+- The WebSocket streaming channel + voice-command pipeline built in Phase 0 are the exact
+  transport + interaction the glasses will use.
 
 ### Phase 2 — Self-contained edge device
 - Move perception on-device: **YOLO** object/obstacle detection, monocular **depth estimation**,
-  on-device **OCR**, lightweight scene captioning.
+  on-device **OCR**, lightweight scene captioning, and on-device speech recognition.
 - Compute options to evaluate: dedicated vision NPUs (Google Coral-style accelerators, Qualcomm
   or Jetson-class SoCs) vs. phone-tethered.
 - **Spatial audio**: head-tracked binaural cues via IMU so "on your left" sounds left.
@@ -62,11 +65,11 @@ sign reads EXIT" — with a single touch or voice command to change detail level
 
 | Subsystem | Now | Glasses |
 |-----------|-----|---------|
-| Capture | phone camera | RGB + ToF/depth + IMU |
-| Perception | Gemini (cloud) | YOLO + depth + OCR on NPU |
+| Capture | phone camera + mic | RGB + ToF/depth + IMU + mic |
+| Perception | Gemini (cloud, vision + speech) | YOLO + depth + OCR + on-device STT on NPU |
 | Safety layer | prompt rules | deterministic hazard heuristics (proximity, motion) |
 | Audio out | phone TTS | bone-conduction + spatial HRTF |
-| Interaction | touch | touch + voice + single button |
+| Interaction | touch + voice | touch + voice + single button |
 | Navigation | Google Maps | fused GPS/IMU + indoor positioning (BLE/UWB) |
 | Power | n/a | duty-cycling, edge-first |
 
@@ -74,13 +77,13 @@ sign reads EXIT" — with a single touch or voice command to change detail level
 
 1. **Latency** — real-time guidance needs < ~300 ms end-to-end. Mitigate with edge inference + duty-cycling.
 2. **Battery/thermal** — vision is power-hungry; needs duty-cycling and efficient NPUs.
-3. **Privacy** — an always-on camera is sensitive. Default to on-device processing; make cloud opt-in.
+3. **Privacy** — an always-on camera + mic is sensitive. Default to on-device processing; make cloud opt-in.
 4. **Depth accuracy** — monocular depth is approximate; evaluate ToF/LiDAR for the safety layer.
 5. **Form factor** — balancing weight, battery and compute; start tethered, self-contain later.
 
 ## Recommended next concrete steps
 
-1. User-test the phone MVP (including continuous narration) to lock the narration vocabulary.
+1. User-test the phone MVP (continuous narration + voice commands) to lock the narration vocabulary.
 2. Pick a glasses dev kit and build the Phase 1 BLE/WiFi streaming bridge.
 3. Port radar to on-device YOLO + depth; benchmark latency on a dev-kit NPU.
 4. Prototype head-tracked spatial audio.

@@ -14,6 +14,7 @@ can be distributed without exposing credentials.
 | POST | `/api/v1/vision/ocr` | read text in a frame |
 | POST | `/api/v1/vision/radar` | obstacle / object detection |
 | WS | `/api/v1/vision/stream` | continuous scene narration (WebSocket) |
+| POST | `/api/v1/speech/transcribe` | speech-to-text (voice commands) |
 | GET | `/api/v1/navigation/directions` | walking routes (Directions proxy) |
 | GET | `/docs` | interactive OpenAPI UI |
 
@@ -36,7 +37,7 @@ Open http://localhost:8000/docs to try the API.
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `GEMINI_API_KEY` | yes (vision) | Google AI Studio API key |
+| `GEMINI_API_KEY` | yes (vision + speech) | Google AI Studio API key |
 | `GEMINI_MODEL` | no | default `gemini-2.5-flash` |
 | `GOOGLE_MAPS_API_KEY` | yes (navigation) | Maps key with **Directions API** enabled |
 | `CORS_ORIGINS` | no | comma-separated allowed origins, default `*` |
@@ -45,11 +46,10 @@ Open http://localhost:8000/docs to try the API.
 
 In [`app/src/config.ts`](../app/src/config.ts) set `API.baseUrl` to this server
 (e.g. `http://192.168.1.20:8000` on your LAN for Expo Go). The app then routes all
-vision + navigation calls through the backend.
+vision + speech + navigation calls through the backend.
 
-The **continuous narration** mode streams camera frames to `/api/v1/vision/stream` over a
-WebSocket; the client sends frames and the server replies with narration (latest-frame-wins,
-duplicate-suppressed).
+- **Continuous narration** streams camera frames to `/api/v1/vision/stream` over a WebSocket.
+- **Voice commands** record audio on-device and POST it to `/api/v1/speech/transcribe`.
 
 ## Why Python?
 

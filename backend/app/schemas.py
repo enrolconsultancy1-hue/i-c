@@ -18,6 +18,11 @@ class RadarRequest(BaseModel):
     image_base64: str
 
 
+class TranscribeRequest(BaseModel):
+    audio_base64: str = Field(..., description="Base64-encoded audio (no data-URI prefix)")
+    mime_type: str = Field("audio/mp4", description="Audio MIME type, e.g. audio/mp4 or audio/wav")
+
+
 class DetectedObject(BaseModel):
     name: str
     direction: Literal["left", "right", "ahead", "behind"]

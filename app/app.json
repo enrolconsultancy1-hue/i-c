@@ -12,11 +12,12 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "eye see uses the camera to describe your surroundings and read text."
+        "NSCameraUsageDescription": "eye see uses the camera to describe your surroundings and read text.",
+        "NSMicrophoneUsageDescription": "eye see uses the microphone to hear your voice commands."
       }
     },
     "android": {
-      "permissions": ["CAMERA", "ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
+      "permissions": ["CAMERA", "RECORD_AUDIO", "ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
     },
     "plugins": [
       [
@@ -30,6 +31,12 @@
         "expo-location",
         {
           "locationWhenInUsePermission": "eye see uses your location for navigation."
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "eye see uses the microphone to hear your voice commands."
         }
       ]
     ]

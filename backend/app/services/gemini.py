@@ -30,6 +30,10 @@ def image_part(image_b64: str) -> dict:
     return {"inline_data": {"mime_type": mime, "data": image_b64}}
 
 
+def audio_part(audio_b64: str, mime_type: str) -> dict:
+    return {"inline_data": {"mime_type": mime_type, "data": audio_b64}}
+
+
 async def describe(image_b64: str, mode: str, detail: str) -> str:
     text_prompt = f"{prompts.PROMPTS[mode]} {prompts.DETAIL_HINT[detail]}"
     return await _generate([{"text": text_prompt}, image_part(image_b64)])
@@ -42,6 +46,10 @@ async def ocr(image_b64: str) -> str:
 async def radar(image_b64: str) -> list[dict]:
     raw = await _generate([{"text": prompts.RADAR_PROMPT}, image_part(image_b64)])
     return _parse_radar(raw)
+
+
+async def transcribe(audio_b64: str, mime_type: str) -> str:
+    return await _generate([{"text": prompts.TRANSCRIBE_PROMPT}, audio_part(audio_b64, mime_type)])
 
 
 _DIRECTIONS = {"left", "right", "ahead", "behind"}

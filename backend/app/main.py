@@ -1,4 +1,4 @@
-"""eye see backend — FastAPI service that proxies vision + navigation APIs.
+"""eye see backend — FastAPI service that proxies vision + speech + navigation APIs.
 
 Keeps Gemini and Google Maps keys server-side so the mobile app never ships
 secrets in its client bundle.
@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import config
-from .routers import health, navigation, vision
+from .routers import health, navigation, speech, vision
 
 app = FastAPI(
     title="eye see backend",
@@ -25,6 +25,7 @@ app.add_middleware(
 
 app.include_router(health.router, tags=["health"])
 app.include_router(vision.router, prefix="/api/v1/vision", tags=["vision"])
+app.include_router(speech.router, prefix="/api/v1/speech", tags=["speech"])
 app.include_router(navigation.router, prefix="/api/v1/navigation", tags=["navigation"])
 
 

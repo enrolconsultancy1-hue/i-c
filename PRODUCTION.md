@@ -1,8 +1,8 @@
 # eye see — Production Readiness Checklist
 
 Status: functionally complete — real camera vision (Gemini), OCR text reading, obstacle radar,
-and live GPS navigation with auto-advance + rerouting. A FastAPI backend (`backend/`) now proxies
-Gemini + Maps so keys stay server-side.
+live GPS navigation, continuous narration (WebSocket), and voice commands. A FastAPI backend
+(`backend/`) proxies Gemini (vision + speech) and Maps so keys stay server-side.
 
 ## 1. Secrets (do before shipping)
 - ✅ Gemini + Maps keys moved out of `app/src/config.ts` into `backend/.env` (see `backend/.env.example`).
@@ -21,9 +21,11 @@ Gemini + Maps so keys stay server-side.
 - Replace the default app icon + splash in `app/assets`.
 - Review Play Store / App Store accessibility declarations (this is an accessibility product).
 
-## 4. Voice input (optional)
-- Wake-word / voice commands were removed to minimize permissions. Re-add the microphone permission +
-  `expo-camera` `recordAudioAndroid: true` if voice input is added later.
+## 4. Voice input
+- ✅ Voice commands implemented (`expo-audio` recording + `/api/v1/speech/transcribe` via Gemini).
+- Verify the audio container works with Gemini: the app records `.m4a` (AAC) and sends
+  `audio/mp4`; if transcription fails, switch the recording preset to a Gemini-friendly format
+  (e.g. WAV) in `app/src/components/VoiceButton.tsx` + `app/src/services/voice.ts`.
 
 ## 5. Offline fallback (optional)
 - ML Kit text/object detection for offline OCR/radar when there is no network.

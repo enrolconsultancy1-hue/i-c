@@ -10,6 +10,7 @@ import ModeToggle from '../components/ModeToggle';
 import NarrationCard from '../components/NarrationCard';
 import DescribeButton from '../components/DescribeButton';
 import StreamToggle from '../components/StreamToggle';
+import VoiceButton from '../components/VoiceButton';
 import DetailSegmented from '../components/DetailSegmented';
 import QuickActions from '../components/QuickActions';
 
@@ -129,6 +130,7 @@ export default function LiveViewScreen() {
       <DetailSegmented />
       {streaming ? null : <DescribeButton onPress={handleDescribe} />}
       <StreamToggle />
+      <VoiceButton onDescribe={handleDescribe} />
       <QuickActions />
     </View>
   );

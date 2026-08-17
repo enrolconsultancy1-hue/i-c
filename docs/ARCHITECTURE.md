@@ -10,19 +10,20 @@ spoken guidance.
 ┌───────────────────────────────┐        ┌────────────────────────────────┐
 │  Mobile app  (app/)           │  HTTP  │  Backend  (backend/)            │
 │  Expo / React Native / TS     │ + WS   │  FastAPI / Python               │
-│  camera · TTS · GPS · UI      │───────▶│  /vision/* · /navigation/*      │
+│  camera · mic · TTS · GPS · UI│───────▶│  /vision/* /speech/* /nav/*     │
 └───────────────────────────────┘        └──────────────┬─────────────────┘
                                                         │  server-side keys
                                             ┌───────────┴─────────────┐
-                                            │  Gemini Vision           │
+                                            │  Gemini Vision + Audio   │
                                             │  Google Maps Directions  │
                                             └─────────────────────────┘
 ```
 
 ## Layers
 
-1. **Capture** (`expo-camera`) — frames + GPS + orientation.
-2. **Perception** (Gemini via backend) — scene description, OCR, object/obstacle detection.
+1. **Capture** (`expo-camera` + `expo-audio`) — frames + audio + GPS + orientation.
+2. **Perception** (Gemini via backend) — scene description, OCR, object/obstacle detection,
+   and speech transcription (voice commands).
 3. **Reasoning / safety** — the prompts embed a safety frame: positions, distances, hazards.
 4. **Presentation** — text-to-speech (`expo-speech`) + spatial-audio direction cues + high-contrast UI.
 5. **Navigation** — Google Directions (via backend) + optional Navigation SDK for turn-by-turn.
@@ -44,24 +45,34 @@ spoken guidance.
    utterances, no repeats) and speaks via `speech.ts`.
 4. This transport is the same one the wearable glasses will use in Phase 1.
 
+## Data flow (voice command)
+
+1. User taps "Voice command" → `VoiceButton` requests mic permission and records via `expo-audio`.
+2. On stop, the recording is read as base64 (`expo-file-system`) and POSTed to
+   `/api/v1/speech/transcribe` with its MIME type.
+3. The backend transcribes via Gemini audio; the app maps the transcript to a command
+   (`services/voice.ts` → describe / read / radar / navigate / stop / home) and executes it.
+4. This gives hands-free control — the primary interaction model for wearable glasses.
+
 ## Key decisions
 
 - **Keys live server-side.** The client never embeds `GEMINI_API_KEY` or `GOOGLE_MAPS_API_KEY`
   in production. `API.baseUrl` (empty = demo/mock mode) points the app at the backend.
 - **REST for single-shot, WebSocket for continuous.** On-demand actions (Describe / OCR / Radar /
-  Directions) use simple HTTP. Continuous real-time narration streams frames over a WebSocket
-  with coalescing + dedup — the exact pattern needed for the wearable (Phase 1).
+  Transcribe / Directions) use simple HTTP. Continuous real-time narration streams frames over a
+  WebSocket with coalescing + dedup — the exact pattern needed for the wearable (Phase 1).
 - **Python backend.** The perception pipeline (today Gemini, tomorrow on-device YOLO/depth)
   belongs in Python so it can move cloud → edge with minimal rewrites.
 
 ## Security & privacy
 
 - Gemini + Maps keys live only in `backend/.env` (never committed — see `.gitignore`).
-- A vision-disability product is inherently camera-on; treat frames as sensitive:
-  - Send frames only while the user is actively describing or streaming (no background upload).
+- A vision-disability product is inherently camera-on and now mic-capable; treat frames and audio
+  as sensitive:
+  - Send frames/audio only while the user is actively describing, streaming, or speaking.
   - Strip EXIF/geotags from frames before upload (planned).
   - Prefer on-device inference long-term (see `WEARABLE_ROADMAP.md`).
-  - The backend is stateless today: it does not store frames or narration. If you add
+  - The backend is stateless today: it does not store frames, audio, or narration. If you add
     history/analytics, encrypt at rest and make it opt-in.
 
 ## Directory map
